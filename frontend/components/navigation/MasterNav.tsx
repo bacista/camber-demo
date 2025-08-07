@@ -61,32 +61,41 @@ const modules: NavModule[] = [
     badgeColor: 'bg-emerald-500'
   },
   { 
+    id: 'invoices', 
+    label: 'Invoices', 
+    icon: FileText, 
+    href: '/invoices',
+    shortcut: '4',
+    badge: '3',
+    badgeColor: 'bg-red-500'
+  },
+  { 
     id: 'customers', 
     label: 'Customers', 
     icon: Users, 
     href: '/customers',
-    shortcut: '4'
+    shortcut: '5'
   },
   { 
     id: 'products', 
     label: 'Products', 
     icon: Warehouse, 
     href: '/products',
-    shortcut: '5'
+    shortcut: '6'
   },
   { 
     id: 'analytics', 
     label: 'Analytics', 
     icon: TrendingUp, 
     href: '/analytics',
-    shortcut: '6'
+    shortcut: '7'
   },
   { 
     id: 'integrations', 
     label: 'Integrations', 
     icon: Sparkles, 
     href: '/integrations',
-    shortcut: '7',
+    shortcut: '8',
     badge: '1',
     badgeColor: 'bg-yellow-500'
   },
@@ -95,7 +104,7 @@ const modules: NavModule[] = [
     label: 'Settings', 
     icon: Settings, 
     href: '/settings',
-    shortcut: '8'
+    shortcut: '9'
   },
 ]
 
