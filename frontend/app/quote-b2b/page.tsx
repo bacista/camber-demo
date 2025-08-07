@@ -9,8 +9,10 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { FileUploadOverlay } from '@/components/quote/FileUploadOverlay'
 import { PreviousQuoteSelect } from '@/components/quote/PreviousQuoteSelect'
 import { ValidationStrip } from '@/components/quote/ValidationStrip'
-import { sampleQuotes, sampleProducts, sampleCustomers } from '@/lib/mock-data'
-import type { Quote, LineItem } from '@/lib/types'
+import { RecentOrderModal } from '@/components/orders/RecentOrderModal'
+import { sampleQuotes, sampleProducts, sampleCustomers, sampleOrders } from '@/lib/mock-data'
+import type { Quote, LineItem, Order } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { 
   Search,
   Plus,
@@ -56,6 +58,8 @@ export default function QuoteB2BPage() {
   const [showCustomerPanel, setShowCustomerPanel] = useState(true)
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [showUploadOverlay, setShowUploadOverlay] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showOrderModal, setShowOrderModal] = useState(false)
 
   const handleSelectAll = () => {
     if (selectedLineItems.size === selectedQuote.line_items.length) {
@@ -113,6 +117,27 @@ export default function QuoteB2BPage() {
         confidence_score: 100 // High confidence since it's from a previous quote
       }))
     })
+  }
+
+  const handleViewOrder = (orderId: string) => {
+    const order = sampleOrders.find(o => o.id === orderId)
+    if (order) {
+      setSelectedOrder(order)
+      setShowOrderModal(true)
+    }
+  }
+
+  const handleCopyOrderToQuote = (order: Order) => {
+    // Copy line items from the order to the current quote
+    setSelectedQuote({
+      ...selectedQuote,
+      line_items: order.line_items.map((item, index) => ({
+        ...item,
+        id: `order-copied-${index}-${Date.now()}`,
+        confidence_score: 100
+      }))
+    })
+    setShowOrderModal(false)
   }
 
   return (
@@ -191,7 +216,7 @@ export default function QuoteB2BPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Quote List */}
-        <div className="w-64 bg-white border-r flex flex-col">
+        <div className="w-64 bg-[#F8F8F8] border-r flex flex-col">
           <div className="p-2 border-b">
             <Button className="w-full h-8 text-xs" size="sm">
               <Plus className="h-3 w-3 mr-1" />
@@ -203,8 +228,8 @@ export default function QuoteB2BPage() {
               <div
                 key={quote.id}
                 onClick={() => setSelectedQuote(quote)}
-                className={`p-2 border-b cursor-pointer hover:bg-gray-50 ${
-                  selectedQuote.id === quote.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                className={`p-2 border-b cursor-pointer hover:bg-blue-50 ${
+                  selectedQuote.id === quote.id ? 'bg-blue-100 border-l-2 border-l-blue-500' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -223,7 +248,7 @@ export default function QuoteB2BPage() {
               </div>
             ))}
           </div>
-          <div className="p-2 border-t bg-gray-50">
+          <div className="p-2 border-t bg-gray-100">
             <div className="text-xs text-gray-600">
               <div className="flex justify-between">
                 <span>Total Pipeline:</span>
@@ -315,12 +340,12 @@ export default function QuoteB2BPage() {
             </div>
           </div>
 
-          {/* Validation Indicators Strip */}
-          <ValidationStrip quote={selectedQuote} />
-
-          {/* Main Work Area */}
+          {/* Main Content Area with Customer Intelligence */}
           <div className="flex-1 flex overflow-hidden">
+            {/* Left Content - Validation and Table */}
             <div className="flex-1 flex flex-col">
+              {/* Validation Indicators Strip */}
+              <ValidationStrip quote={selectedQuote} />
               {/* Bulk Actions Bar (shows when items selected) */}
               {selectedLineItems.size > 0 && (
                 <div className="bg-yellow-50 border-b px-4 py-2">
@@ -595,10 +620,7 @@ export default function QuoteB2BPage() {
 
             {/* Right Panel - Customer Context (Collapsible) */}
             {showCustomerPanel && (
-              <div className="w-80 bg-white border-l flex flex-col">
-                <div className="p-3 border-b">
-                  <h3 className="text-sm font-semibold">Customer Intelligence</h3>
-                </div>
+              <div className="w-80 bg-[#F8F8F8] border-l flex flex-col">
                 <div className="flex-1 overflow-auto p-3 space-y-4">
                   {/* Account Hierarchy */}
                   <div>
@@ -625,21 +647,33 @@ export default function QuoteB2BPage() {
                   <div>
                     <h4 className="text-xs font-medium text-gray-600 mb-2">Recent Orders</h4>
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs p-1">
-                        <span>PO-2024-8821</span>
-                        <span>$12,450</span>
-                        <span className="text-gray-500">3 days ago</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs p-1">
-                        <span>PO-2024-8756</span>
-                        <span>$8,200</span>
-                        <span className="text-gray-500">1 week ago</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs p-1">
-                        <span>PO-2024-8699</span>
-                        <span>$15,800</span>
-                        <span className="text-gray-500">2 weeks ago</span>
-                      </div>
+                      {sampleOrders
+                        .filter(order => order.customer.id === selectedQuote.customer.id)
+                        .slice(0, 3)
+                        .map(order => (
+                          <div 
+                            key={order.id}
+                            onClick={() => handleViewOrder(order.id)}
+                            className="flex items-center justify-between text-xs p-2 hover:bg-white rounded cursor-pointer transition-colors"
+                          >
+                            <span className="font-medium text-blue-600 hover:text-blue-800">
+                              {order.po_number}
+                            </span>
+                            <span className="font-medium">${order.total.toFixed(0)}</span>
+                            <span className="text-gray-500">
+                              {Math.floor((Date.now() - Date.parse(order.created_at)) / 86400000)} days ago
+                            </span>
+                          </div>
+                        ))
+                      }
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full h-7 text-xs mt-2"
+                        onClick={() => {/* Would navigate to orders filtered by customer */}}
+                      >
+                        View All Orders →
+                      </Button>
                     </div>
                   </div>
 
@@ -714,6 +748,17 @@ export default function QuoteB2BPage() {
           </div>
         </div>
       </div>
+
+      {/* Recent Order Modal */}
+      <RecentOrderModal 
+        order={selectedOrder}
+        isOpen={showOrderModal}
+        onClose={() => {
+          setShowOrderModal(false)
+          setSelectedOrder(null)
+        }}
+        onCopyToQuote={handleCopyOrderToQuote}
+      />
     </div>
   )
 }
