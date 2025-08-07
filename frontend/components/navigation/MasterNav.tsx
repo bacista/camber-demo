@@ -8,11 +8,9 @@ import {
   FileText,
   Package,
   Warehouse,
-  Truck,
   BarChart3,
   Users,
   Settings,
-  HelpCircle,
   Building,
   ChevronLeft,
   ChevronRight,
@@ -21,10 +19,9 @@ import {
   Menu,
   X,
   Sparkles,
-  CreditCard,
-  Mail,
   Clock,
-  AlertCircle
+  TrendingUp,
+  LayoutDashboard
 } from 'lucide-react'
 
 interface NavModule {
@@ -39,11 +36,18 @@ interface NavModule {
 
 const modules: NavModule[] = [
   { 
+    id: 'dashboard', 
+    label: 'Dashboard', 
+    icon: LayoutDashboard, 
+    href: '/',
+    shortcut: '1'
+  },
+  { 
     id: 'quotes', 
     label: 'Quotes', 
     icon: FileText, 
     href: '/quote-b2b',
-    shortcut: '1',
+    shortcut: '2',
     badge: '12',
     badgeColor: 'bg-blue-500'
   },
@@ -52,38 +56,29 @@ const modules: NavModule[] = [
     label: 'Orders', 
     icon: Package, 
     href: '/orders-b2b',
-    shortcut: '2',
+    shortcut: '3',
     badge: '8',
     badgeColor: 'bg-emerald-500'
-  },
-  { 
-    id: 'inventory', 
-    label: 'Inventory', 
-    icon: Warehouse, 
-    href: '/inventory',
-    shortcut: '3'
-  },
-  { 
-    id: 'shipping', 
-    label: 'Shipping', 
-    icon: Truck, 
-    href: '/shipping',
-    shortcut: '4',
-    badge: '3',
-    badgeColor: 'bg-yellow-500'
-  },
-  { 
-    id: 'analytics', 
-    label: 'Analytics', 
-    icon: BarChart3, 
-    href: '/analytics',
-    shortcut: '5'
   },
   { 
     id: 'customers', 
     label: 'Customers', 
     icon: Users, 
     href: '/customers',
+    shortcut: '4'
+  },
+  { 
+    id: 'products', 
+    label: 'Products', 
+    icon: Warehouse, 
+    href: '/products',
+    shortcut: '5'
+  },
+  { 
+    id: 'analytics', 
+    label: 'Analytics', 
+    icon: TrendingUp, 
+    href: '/analytics',
     shortcut: '6'
   },
   { 
@@ -94,18 +89,11 @@ const modules: NavModule[] = [
     shortcut: '7'
   },
   { 
-    id: 'billing', 
-    label: 'Billing', 
-    icon: CreditCard, 
-    href: '/billing',
-    shortcut: '8'
-  },
-  { 
     id: 'settings', 
     label: 'Settings', 
     icon: Settings, 
     href: '/settings',
-    shortcut: '9'
+    shortcut: '8'
   },
 ]
 
@@ -122,7 +110,7 @@ export function MasterNav({ children }: MasterNavProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Alt + Number for module switching
-      if (e.altKey && e.key >= '1' && e.key <= '9') {
+      if (e.altKey && e.key >= '1' && e.key <= '8') {
         e.preventDefault()
         const moduleIndex = parseInt(e.key) - 1
         if (modules[moduleIndex]) {
@@ -142,7 +130,8 @@ export function MasterNav({ children }: MasterNavProps) {
   }, [isCollapsed])
 
   const getActiveModule = () => {
-    return modules.find(m => pathname.startsWith(m.href)) || modules[0]
+    if (pathname === '/') return modules[0]
+    return modules.find(m => m.href !== '/' && pathname.startsWith(m.href)) || modules[0]
   }
 
   const activeModule = getActiveModule()
@@ -151,47 +140,60 @@ export function MasterNav({ children }: MasterNavProps) {
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col bg-white border-r transition-all duration-300",
-        isCollapsed ? "w-16" : "w-56"
+        "hidden md:flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 flex-shrink-0",
+        isCollapsed ? "w-16" : "w-[200px]"
       )}>
         {/* Logo/Brand Section */}
-        <div className="h-14 border-b flex items-center justify-between px-4">
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <Building className="h-5 w-5 text-blue-600" />
-              <span className="font-semibold text-sm">Camber</span>
+        <div className="h-14 border-b border-slate-800 flex items-center px-3">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-sm text-white">Camber</span>
+              </div>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
             </div>
+          ) : (
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white mx-auto"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
         </div>
 
         {/* Navigation Modules */}
         <nav className="flex-1 py-2">
           {modules.map((module) => {
             const Icon = module.icon
-            const isActive = pathname.startsWith(module.href)
+            const isActive = module.href === '/' 
+              ? pathname === '/' 
+              : pathname.startsWith(module.href)
             
             return (
               <Link
                 key={module.id}
                 href={module.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 mx-2 rounded transition-colors",
-                  "hover:bg-gray-100",
-                  isActive && "bg-blue-50 text-blue-600 font-medium",
-                  !isActive && "text-gray-700"
+                  "relative flex items-center gap-3 py-2 transition-colors",
+                  isCollapsed ? "px-3 justify-center" : "px-3",
+                  "hover:bg-slate-800",
+                  isActive && "bg-slate-800 border-l-4 border-blue-500",
+                  !isActive && "text-slate-400 hover:text-white border-l-4 border-transparent",
+                  isActive && "text-white"
                 )}
               >
-                <div className="relative">
+                <div className="relative flex items-center justify-center flex-shrink-0">
                   <Icon className="h-5 w-5" />
-                  {module.badge && !isCollapsed && (
+                  {module.badge && isCollapsed && (
                     <span className={cn(
-                      "absolute -top-1 -right-1 h-3 w-3 rounded-full",
+                      "absolute -top-1 -right-1 h-2 w-2 rounded-full",
                       module.badgeColor || "bg-red-500"
                     )} />
                   )}
@@ -199,7 +201,7 @@ export function MasterNav({ children }: MasterNavProps) {
                 {!isCollapsed && (
                   <>
                     <span className="flex-1 text-sm">{module.label}</span>
-                    <span className="text-xs text-gray-400">Alt+{module.shortcut}</span>
+                    <span className="text-xs text-slate-500">Alt+{module.shortcut}</span>
                     {module.badge && (
                       <span className={cn(
                         "px-1.5 py-0.5 text-xs rounded-full text-white",
@@ -217,59 +219,59 @@ export function MasterNav({ children }: MasterNavProps) {
 
         {/* Status Section */}
         {!isCollapsed && (
-          <div className="border-t p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
+          <div className="border-t border-slate-800 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <Clock className="h-3 w-3" />
               <span>Last sync: 2 min ago</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-gray-600">All systems operational</span>
+              <span className="text-slate-500">All systems operational</span>
             </div>
           </div>
         )}
 
         {/* User Section */}
         <div className={cn(
-          "border-t p-3",
+          "border-t border-slate-800 p-3",
           isCollapsed && "px-2"
         )}>
           <div className={cn(
             "flex items-center gap-3",
             isCollapsed && "justify-center"
           )}>
-            <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-blue-600" />
+            <div className="h-8 w-8 bg-slate-800 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="h-4 w-4 text-slate-400" />
             </div>
             {!isCollapsed && (
-              <div className="flex-1">
-                <p className="text-sm font-medium">Sarah Chen</p>
-                <p className="text-xs text-gray-500">Admin</p>
-              </div>
-            )}
-            {!isCollapsed && (
-              <button className="p-1 hover:bg-gray-100 rounded">
-                <LogOut className="h-4 w-4 text-gray-500" />
-              </button>
+              <>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-white">Sarah Chen</p>
+                  <p className="text-xs text-slate-500">Admin</p>
+                </div>
+                <button className="p-1 hover:bg-slate-800 rounded">
+                  <LogOut className="h-4 w-4 text-slate-500 hover:text-white" />
+                </button>
+              </>
             )}
           </div>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-50">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-slate-900 border-b border-slate-800 z-50">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMobileOpen(!isMobileOpen)}
-              className="p-2 hover:bg-gray-100 rounded"
+              className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
             >
               {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Building className="h-5 w-5 text-blue-600" />
-            <span className="font-semibold">Camber</span>
+            <Building className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-white">Camber</span>
           </div>
-          <span className="text-sm text-gray-600">{activeModule.label}</span>
+          <span className="text-sm text-slate-400">{activeModule.label}</span>
         </div>
       </div>
 
@@ -280,11 +282,13 @@ export function MasterNav({ children }: MasterNavProps) {
             className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsMobileOpen(false)}
           />
-          <aside className="md:hidden fixed left-0 top-14 bottom-0 w-64 bg-white z-50 flex flex-col">
+          <aside className="md:hidden fixed left-0 top-14 bottom-0 w-64 bg-slate-900 z-50 flex flex-col">
             <nav className="flex-1 py-2">
               {modules.map((module) => {
                 const Icon = module.icon
-                const isActive = pathname.startsWith(module.href)
+                const isActive = module.href === '/' 
+                  ? pathname === '/' 
+                  : pathname.startsWith(module.href)
                 
                 return (
                   <Link
@@ -293,8 +297,8 @@ export function MasterNav({ children }: MasterNavProps) {
                     onClick={() => setIsMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3",
-                      isActive && "bg-blue-50 text-blue-600 font-medium border-l-4 border-blue-600",
-                      !isActive && "text-gray-700"
+                      isActive && "bg-slate-800 text-white font-medium border-l-4 border-blue-500",
+                      !isActive && "text-slate-400"
                     )}
                   >
                     <Icon className="h-5 w-5" />
