@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -287,9 +287,8 @@ export default function OrdersB2BPage() {
           </thead>
           <tbody>
             {sampleOrders.map((order) => (
-              <>
+              <React.Fragment key={order.id}>
                 <tr 
-                  key={order.id} 
                   className={`border-b hover:bg-gray-50 ${
                     selectedOrders.has(order.id) ? 'bg-blue-50' : ''
                   } ${
@@ -484,7 +483,7 @@ export default function OrdersB2BPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
