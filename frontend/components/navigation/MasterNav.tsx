@@ -86,7 +86,9 @@ const modules: NavModule[] = [
     label: 'Integrations', 
     icon: Sparkles, 
     href: '/integrations',
-    shortcut: '7'
+    shortcut: '7',
+    badge: '1',
+    badgeColor: 'bg-yellow-500'
   },
   { 
     id: 'settings', 
