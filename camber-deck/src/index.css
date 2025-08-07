@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-camber: oklch(0.64 0.15 179);
+  
+  --animate-slide-in: slideIn 0.3s ease-out;
+  --animate-fade-in: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  0% { 
+    transform: translateY(20px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes fadeIn {
+  0% { 
+    opacity: 0; 
+  }
+  100% { 
+    opacity: 1; 
+  }
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .slide-container {
+    page-break-after: always;
+    height: 100vh;
+  }
+}
