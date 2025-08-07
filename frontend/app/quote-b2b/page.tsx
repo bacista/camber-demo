@@ -10,7 +10,9 @@ import { FileUploadOverlay } from '@/components/quote/FileUploadOverlay'
 import { PreviousQuoteSelect } from '@/components/quote/PreviousQuoteSelect'
 import { ValidationStrip } from '@/components/quote/ValidationStrip'
 import { RecentOrderModal } from '@/components/orders/RecentOrderModal'
-import { sampleQuotes, sampleProducts, sampleCustomers, sampleOrders } from '@/lib/mock-data'
+import { QuoteToOrderModal } from '@/components/quote/QuoteToOrderModal'
+import { Toast, useToast } from '@/components/ui/toast'
+import { sampleQuotes, sampleProducts, sampleCustomers, sampleOrders, sampleSalesRep } from '@/lib/mock-data'
 import type { Quote, LineItem, Order } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { 
@@ -52,16 +54,20 @@ import {
 } from 'lucide-react'
 
 export default function QuoteB2BPage() {
-  const [selectedQuote, setSelectedQuote] = useState(sampleQuotes[0])
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
   const [selectedLineItems, setSelectedLineItems] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'dense' | 'standard'>('dense')
-  const [showCustomerPanel, setShowCustomerPanel] = useState(true)
+  const [showCustomerPanel, setShowCustomerPanel] = useState(false)
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [showUploadOverlay, setShowUploadOverlay] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
+  const [showConvertModal, setShowConvertModal] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const { toast, showToast, hideToast } = useToast()
 
   const handleSelectAll = () => {
+    if (!selectedQuote) return
     if (selectedLineItems.size === selectedQuote.line_items.length) {
       setSelectedLineItems(new Set())
     } else {
@@ -98,24 +104,77 @@ export default function QuoteB2BPage() {
       item.subtotal = item.quantity * item.unit_price * (1 - discount / 100)
     })
 
-    setSelectedQuote({
-      ...selectedQuote,
-      line_items: extractedItems
-    })
+    // If no quote is selected, create a new one
+    if (!selectedQuote) {
+      const newQuote: Quote = {
+        id: `quote-new-${Date.now()}`,
+        quote_number: `Q-2024-${Math.floor(Math.random() * 1000) + 2000}`,
+        version: 1,
+        status: 'draft',
+        customer: sampleCustomers[0], // Default customer, should be selectable
+        sales_rep: sampleSalesRep,
+        line_items: extractedItems,
+        billing_address: sampleCustomers[0].billing_address,
+        shipping_address: sampleCustomers[0].shipping_address,
+        subtotal: extractedItems.reduce((sum, item) => sum + item.subtotal, 0),
+        tax_rate: 0.0825,
+        tax_amount: 0,
+        shipping_cost: 0,
+        total: 0,
+        valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        created_at: new Date(),
+        updated_at: new Date(),
+        status_history: []
+      }
+      newQuote.tax_amount = newQuote.subtotal * newQuote.tax_rate
+      newQuote.total = newQuote.subtotal + newQuote.tax_amount + newQuote.shipping_cost
+      setSelectedQuote(newQuote)
+    } else {
+      setSelectedQuote({
+        ...selectedQuote,
+        line_items: extractedItems
+      })
+    }
     setShowUploadOverlay(false)
   }
 
   const handleCopyFromPrevious = (quote: Quote) => {
-    // Copy line items from the selected quote
-    setSelectedQuote({
-      ...selectedQuote,
-      line_items: quote.line_items.map((item, index) => ({
+    if (!selectedQuote) return
+    
+    // Copy line items with recalculated pricing
+    const copiedItems = quote.line_items.map((item, index) => {
+      // Simulate fetching current pricing (in real app, this would be an API call)
+      // Add 2-5% price variation to simulate market price changes
+      const priceVariation = 1 + (Math.random() * 0.05 - 0.025)
+      const currentUnitPrice = item.product.unit_price * priceVariation
+      
+      return {
         ...item,
         id: `copied-${index}-${Date.now()}`,
-        // Recalculate prices based on current pricing
-        unit_price: item.product.unit_price,
+        unit_price: currentUnitPrice,
+        subtotal: currentUnitPrice * item.quantity,
         confidence_score: 100 // High confidence since it's from a previous quote
-      }))
+      }
+    })
+    
+    // Calculate new totals
+    const newSubtotal = copiedItems.reduce((sum, item) => sum + item.subtotal, 0)
+    const newTaxAmount = selectedQuote.tax_exempt ? 0 : newSubtotal * selectedQuote.tax_rate
+    const newTotal = newSubtotal + newTaxAmount + selectedQuote.shipping_cost
+    
+    setSelectedQuote({
+      ...selectedQuote,
+      line_items: copiedItems,
+      subtotal: newSubtotal,
+      tax_amount: newTaxAmount,
+      total: newTotal
+    })
+    
+    // Show success message
+    showToast({
+      message: `Copied ${copiedItems.length} items from ${quote.quote_number} with updated pricing`,
+      type: 'success',
+      duration: 4000
     })
   }
 
@@ -138,6 +197,60 @@ export default function QuoteB2BPage() {
       }))
     })
     setShowOrderModal(false)
+  }
+
+  const handleAcceptQuote = () => {
+    if (!selectedQuote) return
+    // Update quote status to accepted
+    setSelectedQuote({
+      ...selectedQuote,
+      status: 'accepted'
+    })
+    // Show conversion modal
+    setShowConvertModal(true)
+  }
+
+  const handleSendQuote = () => {
+    if (!selectedQuote) return
+    // Update quote status to sent
+    setSelectedQuote({
+      ...selectedQuote,
+      status: 'sent'
+    })
+    // Show success toast
+    showToast({
+      message: `Quote ${selectedQuote.quote_number} sent to ${selectedQuote.customer.name}`,
+      type: 'success',
+      duration: 4000
+    })
+  }
+
+  const handleConvertToOrder = (orderData: any) => {
+    // Create a new order ID
+    const newOrderId = `ORD-2024-${Math.floor(Math.random() * 1000) + 1000}`
+    
+    // Update the quote to show it's been converted
+    if (selectedQuote) {
+      setSelectedQuote({
+        ...selectedQuote,
+        status: 'accepted',
+        order_id: newOrderId
+      })
+    }
+    
+    // Show success toast with action to view order
+    showToast({
+      message: `Order ${newOrderId} created with PO: ${orderData.po_number}`,
+      type: 'success',
+      duration: 5000,
+      action: {
+        label: 'View Order',
+        onClick: () => {
+          // In a real app, this would navigate to the order
+          console.log(`Navigating to order ${newOrderId}`)
+        }
+      }
+    })
   }
 
   return (
@@ -192,14 +305,20 @@ export default function QuoteB2BPage() {
       <div className="bg-white border-b px-4 py-2">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-500" />
-          <Input placeholder="SKU/PN" className="h-7 w-32 text-xs" />
           <Input placeholder="Customer" className="h-7 w-32 text-xs" />
           <Input type="date" className="h-7 w-32 text-xs" />
-          <select className="h-7 px-2 text-xs border rounded">
-            <option>All Status</option>
-            <option>Draft</option>
-            <option>Sent</option>
-            <option>Accepted</option>
+          <select 
+            className="h-7 px-2 text-xs border rounded"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="accepted">Accepted</option>
+            <option value="rejected">Rejected</option>
+            <option value="expired">Expired</option>
+            <option value="converted">Converted</option>
           </select>
           <Input placeholder="Amount >" className="h-7 w-24 text-xs" />
           <Button variant="outline" size="sm" className="h-7 text-xs">
@@ -218,18 +337,26 @@ export default function QuoteB2BPage() {
         {/* Left Sidebar - Quote List */}
         <div className="w-64 bg-[#F8F8F8] border-r flex flex-col">
           <div className="p-2 border-b">
-            <Button className="w-full h-8 text-xs" size="sm">
+            <Button 
+              className="w-full h-8 text-xs" 
+              size="sm"
+              onClick={() => setSelectedQuote(null)}
+            >
               <Plus className="h-3 w-3 mr-1" />
               New Quote (Ctrl+N)
             </Button>
           </div>
           <div className="flex-1 overflow-auto">
-            {sampleQuotes.map((quote) => (
+            {sampleQuotes
+              .filter(quote => statusFilter === 'all' || quote.status === statusFilter)
+              .map((quote) => (
               <div
                 key={quote.id}
-                onClick={() => setSelectedQuote(quote)}
+                onClick={() => {
+                  setSelectedQuote(quote)
+                }}
                 className={`p-2 border-b cursor-pointer hover:bg-blue-50 ${
-                  selectedQuote.id === quote.id ? 'bg-blue-100 border-l-2 border-l-blue-500' : ''
+                  selectedQuote?.id === quote.id ? 'bg-blue-100 border-l-2 border-l-blue-500' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -264,18 +391,36 @@ export default function QuoteB2BPage() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Quote Header Bar */}
-          <div className="bg-white border-b px-4 py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h2 className="font-semibold">{selectedQuote.quote_number}</h2>
-                <Badge variant="outline" className="text-xs">v{selectedQuote.version}</Badge>
-                <StatusBadge status={selectedQuote.status} size="sm" />
-                <PreviousQuoteSelect
-                  recentQuotes={sampleQuotes.filter(q => q.id !== selectedQuote.id)}
-                  onSelectQuote={handleCopyFromPrevious}
-                  currentCustomerId={selectedQuote.customer.id}
-                />
+          {!selectedQuote ? (
+            // Empty state when no quote is selected
+            <div className="flex-1 flex items-center justify-center bg-white relative">
+              <FileUploadOverlay
+                isVisible={true}
+                onFileSelect={handleFileUpload}
+                isAbsolute={false}
+                className="w-full max-w-2xl h-96"
+              />
+            </div>
+          ) : (
+            <>
+              {/* Quote Header Bar */}
+              <div className="bg-white border-b px-4 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <h2 className="font-semibold">{selectedQuote.quote_number}</h2>
+                    <Badge variant="outline" className="text-xs">v{selectedQuote.version}</Badge>
+                    <StatusBadge status={selectedQuote.status} size="sm" />
+                    {selectedQuote.order_id && (
+                      <Badge className="bg-purple-100 text-purple-700 text-xs">
+                        <Package className="h-3 w-3 mr-1" />
+                        Converted to {selectedQuote.order_id}
+                      </Badge>
+                    )}
+                    <PreviousQuoteSelect
+                      recentQuotes={sampleQuotes.filter(q => q.id !== selectedQuote.id)}
+                      onSelectQuote={handleCopyFromPrevious}
+                      currentCustomerId={selectedQuote.customer.id}
+                    />
                 <span className="text-xs text-gray-500">
                   Valid until {new Date(selectedQuote.valid_until).toLocaleDateString()}
                 </span>
@@ -393,6 +538,59 @@ export default function QuoteB2BPage() {
                     onDismiss={() => setShowUploadOverlay(false)}
                     className="rounded-lg"
                   />
+                )}
+                
+                {/* Quick Add by SKU */}
+                {selectedQuote.line_items.length > 0 && (
+                  <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-blue-700">Quick Add:</label>
+                      <Input 
+                        placeholder="Enter SKU or Part Number" 
+                        className="h-7 w-48 text-xs"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            // Add item logic here
+                            const input = e.target as HTMLInputElement
+                            if (input.value) {
+                              // Find matching product or create new line item
+                              const newItem: LineItem = {
+                                id: `item-${Date.now()}`,
+                                product: {
+                                  id: `prod-${Date.now()}`,
+                                  sku: input.value,
+                                  name: 'Quick Add Item',
+                                  unit_price: 0,
+                                  unit_of_measure: 'EA'
+                                },
+                                quantity: 1,
+                                unit_price: 0,
+                                subtotal: 0
+                              }
+                              setSelectedQuote({
+                                ...selectedQuote,
+                                line_items: [...selectedQuote.line_items, newItem]
+                              })
+                              input.value = ''
+                            }
+                          }
+                        }}
+                      />
+                      <Input 
+                        type="number" 
+                        placeholder="Qty" 
+                        className="h-7 w-16 text-xs"
+                        defaultValue="1"
+                      />
+                      <Button size="sm" className="h-7 text-xs">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                      <span className="text-xs text-gray-500 ml-2">
+                        Press Enter to add • Supports fuzzy matching
+                      </span>
+                    </div>
+                  </div>
                 )}
                 
                 <table className="w-full text-sm">
@@ -563,16 +761,23 @@ export default function QuoteB2BPage() {
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3 w-3 text-gray-500" />
                       <span className="font-medium">Bill:</span>
-                      <span className="text-gray-600">{selectedQuote.billing_address.street}, {selectedQuote.billing_address.city}</span>
+                      <span className="text-gray-600">
+                        {selectedQuote.billing_address ? 
+                          `${selectedQuote.billing_address.street}, ${selectedQuote.billing_address.city}` :
+                          'No billing address set'
+                        }
+                      </span>
                       <button className="text-blue-600 hover:underline">Edit</button>
                     </div>
                     <div className="flex items-center gap-2">
                       <Truck className="h-3 w-3 text-gray-500" />
                       <span className="font-medium">Ship:</span>
                       <span className="text-gray-600">
-                        {selectedQuote.job_site_address ? 
-                          `${selectedQuote.job_site_address.street}, ${selectedQuote.job_site_address.city}` :
-                          'Same as billing'
+                        {selectedQuote.shipping_address ? 
+                          `${selectedQuote.shipping_address.street}, ${selectedQuote.shipping_address.city}` :
+                          selectedQuote.job_site_address ? 
+                            `${selectedQuote.job_site_address.street}, ${selectedQuote.job_site_address.city}` :
+                            'Same as billing'
                         }
                       </span>
                       <button className="text-blue-600 hover:underline">Edit</button>
@@ -601,15 +806,33 @@ export default function QuoteB2BPage() {
                         Save (Ctrl+S)
                       </Button>
                       {selectedQuote.status === 'draft' && (
-                        <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700">
+                        <Button 
+                          size="sm" 
+                          className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                          onClick={handleSendQuote}
+                        >
                           <Send className="h-3 w-3 mr-1" />
                           Send Quote
                         </Button>
                       )}
                       {selectedQuote.status === 'sent' && (
-                        <Button size="sm" className="h-8 text-xs bg-green-600 hover:bg-green-700">
+                        <Button 
+                          size="sm" 
+                          className="h-8 text-xs bg-green-600 hover:bg-green-700"
+                          onClick={handleAcceptQuote}
+                        >
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Accept Quote
+                        </Button>
+                      )}
+                      {selectedQuote.status === 'accepted' && (
+                        <Button 
+                          size="sm" 
+                          className="h-8 text-xs bg-purple-600 hover:bg-purple-700"
+                          onClick={() => setShowConvertModal(true)}
+                        >
+                          <Package className="h-3 w-3 mr-1" />
+                          Convert to Order
                         </Button>
                       )}
                     </div>
@@ -628,17 +851,19 @@ export default function QuoteB2BPage() {
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
                         <Building className="h-3 w-3" />
-                        <span className="font-medium">ACME Corp (Parent)</span>
+                        <span className="font-medium">{selectedQuote.customer.name}</span>
                       </div>
-                      <div className="ml-4 space-y-1">
+                      <div className="ml-4 space-y-1 text-gray-500">
                         <div className="flex items-center gap-2 p-1">
                           <ChevronRight className="h-3 w-3 text-gray-400" />
-                          ACME Construction (Current)
+                          Type: {selectedQuote.customer.type}
                         </div>
-                        <div className="flex items-center gap-2 p-1">
-                          <ChevronRight className="h-3 w-3 text-gray-400" />
-                          ACME Plumbing
-                        </div>
+                        {selectedQuote.customer.credit_limit && (
+                          <div className="flex items-center gap-2 p-1">
+                            <ChevronRight className="h-3 w-3 text-gray-400" />
+                            Credit: ${selectedQuote.customer.credit_limit.toLocaleString()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -696,22 +921,30 @@ export default function QuoteB2BPage() {
                   <div>
                     <h4 className="text-xs font-medium text-gray-600 mb-2">Credit Status</h4>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span>Credit Limit:</span>
-                        <span className="font-medium">$50,000</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span>Available:</span>
-                        <span className="font-medium text-green-600">$35,000</span>
-                      </div>
+                      {selectedQuote.customer.credit_limit && (
+                        <>
+                          <div className="flex items-center justify-between text-xs">
+                            <span>Credit Limit:</span>
+                            <span className="font-medium">${selectedQuote.customer.credit_limit.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span>Available:</span>
+                            <span className="font-medium text-green-600">
+                              ${(selectedQuote.customer.credit_limit * 0.7).toLocaleString()}
+                            </span>
+                          </div>
+                        </>
+                      )}
                       <div className="flex items-center justify-between text-xs">
                         <span>Payment Terms:</span>
                         <span className="font-medium">Net 30</span>
                       </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span>Avg Days to Pay:</span>
-                        <span className="font-medium">28 days</span>
-                      </div>
+                      {selectedQuote.customer.tax_exempt && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Tax Status:</span>
+                          <span className="font-medium text-green-600">Exempt</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -719,13 +952,17 @@ export default function QuoteB2BPage() {
                   <div>
                     <h4 className="text-xs font-medium text-gray-600 mb-2">Account Notes</h4>
                     <div className="text-xs text-gray-600 p-2 bg-yellow-50 rounded">
-                      Prefers delivery on Tuesdays. Contact Jim for approvals over $10K. Tax exempt - certificate on file.
+                      {selectedQuote.customer.tax_exempt && selectedQuote.customer.tax_exemption_number && 
+                        `Tax exempt - ${selectedQuote.customer.tax_exemption_number} on file. `}
+                      {selectedQuote.notes || 'No special notes for this customer.'}
                     </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -740,11 +977,11 @@ export default function QuoteB2BPage() {
             <span>Auto-save: On</span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Items: {selectedQuote.line_items.length}</span>
+            <span>Items: {selectedQuote?.line_items.length || 0}</span>
             <span>|</span>
             <span>Selected: {selectedLineItems.size}</span>
             <span>|</span>
-            <span>Total: ${selectedQuote.total.toFixed(2)}</span>
+            <span>Total: ${selectedQuote?.total.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </div>
@@ -759,6 +996,27 @@ export default function QuoteB2BPage() {
         }}
         onCopyToQuote={handleCopyOrderToQuote}
       />
+
+      {/* Quote to Order Conversion Modal */}
+      {selectedQuote && (
+        <QuoteToOrderModal
+          quote={selectedQuote}
+          isOpen={showConvertModal}
+          onClose={() => setShowConvertModal(false)}
+          onConvert={handleConvertToOrder}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          action={toast.action}
+          onClose={hideToast}
+        />
+      )}
     </div>
   )
 }

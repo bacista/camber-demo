@@ -15,13 +15,15 @@ interface FileUploadOverlayProps {
   onFileSelect: (file: File) => void
   onDismiss?: () => void
   className?: string
+  isAbsolute?: boolean
 }
 
 export function FileUploadOverlay({ 
   isVisible, 
   onFileSelect,
   onDismiss,
-  className 
+  className,
+  isAbsolute = true 
 }: FileUploadOverlayProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -79,12 +81,13 @@ export function FileUploadOverlay({
 
   return (
     <div className={cn(
-      "absolute inset-0 z-20 bg-white bg-opacity-95",
+      "z-20 bg-white bg-opacity-95",
+      isAbsolute && "absolute inset-0",
       className
     )}>
       <div
         className={cn(
-          "h-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
+          "h-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors p-8",
           isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300"
         )}
         onDragOver={handleDragOver}

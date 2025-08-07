@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import type { Quote } from '@/lib/types'
 import { 
@@ -13,7 +14,8 @@ import {
   DollarSign,
   Package,
   CheckCircle,
-  FileText
+  FileText,
+  X
 } from 'lucide-react'
 
 interface PreviousQuoteSelectProps {
@@ -31,12 +33,14 @@ export function PreviousQuoteSelect({
 }: PreviousQuoteSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null)
+  const [filterCustomer, setFilterCustomer] = useState(true)
 
-  // Filter to show most relevant quotes (same customer first, then recent)
+  // Filter and sort quotes
   const relevantQuotes = [...recentQuotes]
+    .filter(q => !filterCustomer || q.customer.id === currentCustomerId)
     .sort((a, b) => {
-      // Same customer first
-      if (currentCustomerId) {
+      // Same customer first when not filtering
+      if (!filterCustomer && currentCustomerId) {
         const aMatch = a.customer.id === currentCustomerId
         const bMatch = b.customer.id === currentCustomerId
         if (aMatch && !bMatch) return -1
@@ -45,7 +49,7 @@ export function PreviousQuoteSelect({
       // Then by date
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
-    .slice(0, 5)
+    .slice(0, 10)
 
   const handleSelectQuote = (quote: Quote) => {
     onSelectQuote(quote)
@@ -78,17 +82,49 @@ export function PreviousQuoteSelect({
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-30"
+            className="fixed inset-0 z-40 bg-black bg-opacity-50"
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Dropdown */}
-          <div className="absolute top-8 left-0 w-80 bg-white rounded-lg shadow-lg border z-40">
-            <div className="p-2 border-b">
-              <p className="text-xs font-medium text-gray-600">Recent Quotes</p>
-            </div>
-            
-            <div className="max-h-80 overflow-auto">
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+              <div className="p-4 border-b flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Copy from Previous Quote</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Select a quote to copy line items with updated pricing
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsOpen(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Filter Toggle */}
+              <div className="px-4 py-2 border-b bg-gray-50">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={filterCustomer}
+                      onChange={(e) => setFilterCustomer(e.target.checked)}
+                      className="rounded"
+                    />
+                    Show only {currentCustomerId ? 'this customer' : 'same customer'}
+                  </label>
+                  <span className="text-sm text-gray-500">
+                    {relevantQuotes.length} quotes available
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-4">
               {relevantQuotes.map((quote) => {
                 const daysAgo = Math.floor(
                   (Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -152,10 +188,13 @@ export function PreviousQuoteSelect({
                   </div>
                 )
               })}
-            </div>
-            
-            <div className="p-2 bg-gray-50 text-xs text-gray-500">
-              Select a quote to copy all line items
+              </div>
+              
+              <div className="p-4 border-t bg-gray-50">
+                <p className="text-xs text-gray-500 text-center">
+                  Select a quote to copy all line items with updated pricing
+                </p>
+              </div>
             </div>
           </div>
         </>
