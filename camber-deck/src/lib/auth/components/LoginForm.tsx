@@ -38,8 +38,8 @@ export function LoginForm({
     setMessage('');
 
     try {
-      // Use simplified endpoint for Vercel deployment testing
-      const endpoint = import.meta.env.PROD ? '/api/auth/request-simple' : requestEndpoint;
+      // Use the correct endpoint
+      const endpoint = import.meta.env.PROD ? '/api/auth/request' : requestEndpoint;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {

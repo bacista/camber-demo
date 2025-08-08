@@ -1,17 +1,10 @@
 {
   "functions": {
-    "api/auth/*.ts": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    },
+    "api/**/*.ts": {
       "maxDuration": 10
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ]
+  }
 }
