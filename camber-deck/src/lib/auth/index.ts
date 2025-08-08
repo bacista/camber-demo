@@ -52,6 +52,11 @@ export {
   createResendEmailSender
 } from './providers/resend';
 
+export {
+  UpstashSessionStorage,
+  createUpstashStorage
+} from './providers/upstash';
+
 // React components
 export {
   SessionProvider,
