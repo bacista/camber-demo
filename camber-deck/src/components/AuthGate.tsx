@@ -54,14 +54,12 @@ export function AuthGate({ children }: AuthGateProps) {
 
   // Check existing session on mount
   useEffect(() => {
-    // Skip auth check if we want to test locally
-    // Remove this block for production
-    // if (isDevelopment) {
-    //   setIsAuthenticated(true);
-    //   setIsChecking(false);
-    //   console.log('Development mode: Auth bypassed');
-    //   return;
-    // }
+    // Skip auth check in development (API routes don't work with Vite)
+    if (isDevelopment) {
+      console.log('Development mode: Skipping auth check');
+      setIsChecking(false);
+      return;
+    }
     
     checkSession()
       .then(() => {

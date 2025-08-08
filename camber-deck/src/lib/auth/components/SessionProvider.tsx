@@ -29,9 +29,16 @@ export function SessionProvider({
   const checkSession = async () => {
     setIsLoading(true);
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(checkEndpoint, {
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -40,7 +47,12 @@ export function SessionProvider({
         setSession(null);
       }
     } catch (error) {
-      console.error('Session check error:', error);
+      // Silently fail in development - API routes don't work locally
+      if (import.meta.env.DEV) {
+        console.log('Session check skipped in development');
+      } else {
+        console.error('Session check error:', error);
+      }
       setSession(null);
     } finally {
       setIsLoading(false);
