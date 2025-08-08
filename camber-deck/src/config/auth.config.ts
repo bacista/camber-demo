@@ -1,4 +1,4 @@
-import type { AuthConfig } from '../../../packages/auth/src/types';
+import type { AuthConfig } from '../lib/auth/types';
 import { investors } from '../data/investors';
 
 export const authConfig: AuthConfig = {

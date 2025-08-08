@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LoginForm } from '../../../packages/auth/src/components/LoginForm';
-import { useAuth } from '../../../packages/auth/src/hooks/useAuth';
+import { LoginForm } from '../lib/auth/components/LoginForm';
+import { useAuth } from '../lib/auth/hooks/useAuth';
 
 interface AuthGateProps {
   children: React.ReactNode;

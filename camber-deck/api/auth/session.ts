@@ -3,7 +3,7 @@ import {
   SessionManager,
   createUpstashStorage,
   cookieUtils
-} from '../../../packages/auth/src';
+} from '../../src/lib/auth';
 import { authConfig } from '../../src/config/auth.config';
 
 // Initialize dependencies

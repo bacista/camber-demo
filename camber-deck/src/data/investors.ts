@@ -1,4 +1,4 @@
-import type { UserProfile } from '../../../packages/auth/src/types';
+import type { UserProfile } from '../lib/auth/types';
 
 /**
  * Authorized investor allowlist

@@ -7,7 +7,7 @@ import {
   sanitizeInput,
   isValidToken,
   cookieUtils
-} from '../../../packages/auth/src';
+} from '../../src/lib/auth';
 import { authConfig } from '../../src/config/auth.config';
 import { getInvestor } from '../../src/data/investors';
 
