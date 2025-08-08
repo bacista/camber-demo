@@ -38,7 +38,9 @@ export function LoginForm({
     setMessage('');
 
     try {
-      const response = await fetch(requestEndpoint, {
+      // Use simplified endpoint for Vercel deployment testing
+      const endpoint = import.meta.env.PROD ? '/api/auth/request-simple' : requestEndpoint;
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
