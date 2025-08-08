@@ -17,9 +17,14 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      // Note: API routes won't work in dev mode with Vite
-      // They only work when deployed to Vercel
-      // For local testing, we'll use mock authentication
+      // Proxy API requests to Express server during development
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     }
   }
 })
