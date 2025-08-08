@@ -7,7 +7,6 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
-  const [isChecking, setIsChecking] = useState(true);
   const [showTokenExpired, setShowTokenExpired] = useState(false);
   const [showTokenSuccess, setShowTokenSuccess] = useState(false);
   
@@ -19,7 +18,6 @@ export function AuthGate({ children }: AuthGateProps) {
     isLoading,
     error,
     verifyToken,
-    checkSession,
     clearError
   } = useAuth({
     requestEndpoint: '/api/auth/request',
@@ -52,29 +50,13 @@ export function AuthGate({ children }: AuthGateProps) {
     }
   }, [verifyToken]);
 
-  // Check existing session on mount
-  useEffect(() => {
-    // Skip auth check in development (API routes don't work with Vite)
-    if (isDevelopment) {
-      console.log('Development mode: Skipping auth check');
-      setIsChecking(false);
-      return;
-    }
-    
-    checkSession()
-      .then(() => {
-        // Session state is managed by the SessionProvider
-        setIsChecking(false);
-      })
-      .catch(() => {
-        setIsChecking(false);
-      });
-  }, [checkSession, isDevelopment]);
+  // In development mode, bypass authentication completely
+  if (isDevelopment) {
+    return <>{children}</>;
+  }
 
-  // Auth state is now managed by the useAuth hook
-
-  // Show loading state while checking auth
-  if (isChecking || isLoading) {
+  // Show loading state while checking auth (only in production)
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
         <div className="text-center">

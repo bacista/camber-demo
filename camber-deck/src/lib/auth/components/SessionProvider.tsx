@@ -20,18 +20,28 @@ export interface SessionProviderProps {
 
 export function SessionProvider({ 
   children,
-  checkEndpoint = '/api/auth/check',
+  checkEndpoint = '/api/auth/session',
   logoutEndpoint = '/api/auth/logout'
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.DEV;
 
   const checkSession = async () => {
+    // Skip API call entirely in development mode
+    if (isDevelopment) {
+      setSession(null);
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      // Add timeout to prevent hanging
+      // Add timeout to prevent hanging - reduced to 3 seconds for better UX
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
       const response = await fetch(checkEndpoint, {
         credentials: 'include',
@@ -47,9 +57,9 @@ export function SessionProvider({
         setSession(null);
       }
     } catch (error) {
-      // Silently fail in development - API routes don't work locally
-      if (import.meta.env.DEV) {
-        console.log('Session check skipped in development');
+      // Handle abort errors silently
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Session check timeout - treating as unauthenticated');
       } else {
         console.error('Session check error:', error);
       }
@@ -74,8 +84,14 @@ export function SessionProvider({
   };
 
   useEffect(() => {
-    checkSession();
-  }, []);
+    // In development, immediately set loading to false
+    if (isDevelopment) {
+      setSession(null);
+      setIsLoading(false);
+    } else {
+      checkSession();
+    }
+  }, []); // Remove isDevelopment from deps to prevent re-renders
 
   const value: SessionContextType = {
     session,

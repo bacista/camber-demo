@@ -7,7 +7,10 @@ import { AuthGate } from './components/AuthGate'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SessionProvider>
+    <SessionProvider 
+      checkEndpoint="/api/auth/session"
+      logoutEndpoint="/api/auth/logout"
+    >
       <AuthGate>
         <App />
       </AuthGate>
