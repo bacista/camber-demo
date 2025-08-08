@@ -51,9 +51,10 @@ export function AuthGate({ children }: AuthGateProps) {
   }, [verifyToken]);
 
   // In development mode, bypass authentication completely
-  if (isDevelopment) {
-    return <>{children}</>;
-  }
+  // Temporarily commented out for testing the auth UI
+  // if (isDevelopment) {
+  //   return <>{children}</>;
+  // }
 
   // Show loading state while checking auth (only in production)
   if (isLoading) {
@@ -70,17 +71,17 @@ export function AuthGate({ children }: AuthGateProps) {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col justify-center py-12 px-4">
+        <div className="w-full max-w-md mx-auto">
           {/* Logo/Branding */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-4xl font-bold text-white mb-2">Camber</h1>
-            <p className="text-gray-400">AI-Powered Order Entry</p>
+            <p className="text-gray-400">Supply Chain Intelligence</p>
           </div>
 
           {/* Alerts */}
           {showTokenExpired && (
-            <div className="mb-6 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+            <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-lg">
               <p className="text-red-400 text-sm">
                 Your magic link has expired. Please request a new one.
               </p>
@@ -88,7 +89,7 @@ export function AuthGate({ children }: AuthGateProps) {
           )}
           
           {error && (
-            <div className="mb-6 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+            <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-lg">
               <p className="text-red-400 text-sm">{error}</p>
               <button
                 onClick={clearError}
@@ -108,7 +109,7 @@ export function AuthGate({ children }: AuthGateProps) {
           />
 
           {/* Footer */}
-          <p className="text-center text-xs text-gray-500 mt-8">
+          <p className="text-center text-xs text-gray-500 mt-6">
             © {new Date().getFullYear()} Camber, Inc. | Confidential and Proprietary
           </p>
         </div>
