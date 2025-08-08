@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:vite\"",
     "dev:vite": "vite",
-    "dev:api": "node server.js",
+    "dev:api": "PORT=3030 node server.js",
     "dev:simple": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:api": "PORT=3030 NODE_ENV=production node server.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.11",

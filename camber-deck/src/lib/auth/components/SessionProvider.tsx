@@ -25,25 +25,17 @@ export function SessionProvider({
 }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Check if we're in development mode
-  const isDevelopment = import.meta.env.DEV;
 
   const checkSession = async () => {
-    // Skip API call entirely in development mode
-    if (isDevelopment) {
-      setSession(null);
-      setIsLoading(false);
-      return;
-    }
-    
     setIsLoading(true);
     try {
       // Add timeout to prevent hanging - reduced to 3 seconds for better UX
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
-      const response = await fetch(checkEndpoint, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}${checkEndpoint}`;
+      const response = await fetch(endpoint, {
         credentials: 'include',
         signal: controller.signal
       });
@@ -71,7 +63,9 @@ export function SessionProvider({
 
   const logout = async () => {
     try {
-      await fetch(logoutEndpoint, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}${logoutEndpoint}`;
+      await fetch(endpoint, {
         method: 'POST',
         credentials: 'include'
       });
@@ -84,13 +78,8 @@ export function SessionProvider({
   };
 
   useEffect(() => {
-    // In development, immediately set loading to false
-    if (isDevelopment) {
-      setSession(null);
-      setIsLoading(false);
-    } else {
-      checkSession();
-    }
+    // Always check session, regardless of environment
+    checkSession();
   }, []); // Remove isDevelopment from deps to prevent re-renders
 
   const value: SessionContextType = {

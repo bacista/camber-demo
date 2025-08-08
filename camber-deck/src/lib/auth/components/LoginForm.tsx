@@ -38,8 +38,9 @@ export function LoginForm({
     setMessage('');
 
     try {
-      // Use the correct endpoint
-      const endpoint = import.meta.env.PROD ? '/api/auth/request' : requestEndpoint;
+      // Use the API URL from environment or default to relative path
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}/api/auth/request`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {

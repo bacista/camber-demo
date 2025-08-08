@@ -2,23 +2,24 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
-
-// Load environment variables
-dotenv.config({ path: '.env.local' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.API_PORT || process.env.PORT || 3030;
+
+// CORS configuration
+const corsOrigin = process.env.NODE_ENV === 'production' 
+  ? process.env.FRONTEND_URL 
+  : 'http://localhost:5173';
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: corsOrigin,
   credentials: true
 }));
 app.use(bodyParser.json());
@@ -80,6 +81,9 @@ app.post('/api/auth/request', async (req, res) => {
       email,
       expiresAt: Date.now() + (4 * 60 * 60 * 1000)
     });
+    
+    console.log(`[DEBUG] Token generated: ${token}`);
+    console.log(`[DEBUG] Total tokens stored: ${tokens.size}`);
 
     // In development, log the magic link instead of sending email
     const magicLink = `http://localhost:5173/?token=${token}`;
@@ -107,6 +111,10 @@ app.post('/api/auth/verify', async (req, res) => {
   try {
     const { token } = req.body;
     
+    console.log(`[DEBUG] Verify attempt with token: ${token}`);
+    console.log(`[DEBUG] Current tokens in memory: ${tokens.size}`);
+    console.log(`[DEBUG] Available tokens:`, Array.from(tokens.keys()));
+    
     if (!token) {
       return res.status(400).json({
         success: false,
@@ -118,6 +126,7 @@ app.post('/api/auth/verify', async (req, res) => {
     const tokenData = tokens.get(token);
     
     if (!tokenData) {
+      console.log(`[DEBUG] Token not found in memory!`);
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired token'
@@ -155,6 +164,9 @@ app.post('/api/auth/verify', async (req, res) => {
       sameSite: 'lax',
       maxAge: 14 * 24 * 60 * 60 * 1000 // 14 days
     });
+
+    console.log(`[DEBUG] Token verified successfully! Session created: ${sessionId}`);
+    console.log(`[DEBUG] Setting cookie for email: ${session.email}`);
 
     res.json({
       success: true,
@@ -240,8 +252,19 @@ app.post('/api/auth/logout', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 API server running on http://localhost:${PORT}`);
-  console.log('📧 Magic links will be logged to console in development mode');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('📧 Magic links will be logged to console in development mode');
+  }
 });

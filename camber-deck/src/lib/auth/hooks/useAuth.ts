@@ -24,7 +24,9 @@ export function useAuth(options: UseAuthOptions = {}) {
     setError(null);
 
     try {
-      const response = await fetch(options.requestEndpoint || '/api/auth/request', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}${options.requestEndpoint || '/api/auth/request'}`;
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -53,7 +55,9 @@ export function useAuth(options: UseAuthOptions = {}) {
     setError(null);
 
     try {
-      const response = await fetch(options.verifyEndpoint || '/api/auth/verify', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}${options.verifyEndpoint || '/api/auth/verify'}`;
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
