@@ -48,16 +48,26 @@ export interface SalesRep {
   phone?: string
 }
 
+export interface StockLocation {
+  location: string
+  quantity: number
+}
+
 export interface Product {
   id: string
   sku: string
+  manufacturer_sku?: string
   name: string
   description?: string
   unit_price: number
   unit_of_measure: string
-  inventory_status?: 'in_stock' | 'low_stock' | 'out_of_stock'
+  inventory_status?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'special_order'
   available_quantity?: number
   lead_time_days?: number
+  category?: string[]
+  specifications?: Record<string, any>
+  stock_locations?: StockLocation[]
+  alternatives?: string[]
 }
 
 export interface LineItem {
