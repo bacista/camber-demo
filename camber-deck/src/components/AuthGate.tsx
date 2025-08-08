@@ -8,7 +8,6 @@ interface AuthGateProps {
 
 export function AuthGate({ children }: AuthGateProps) {
   const [isChecking, setIsChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showTokenExpired, setShowTokenExpired] = useState(false);
   const [showTokenSuccess, setShowTokenSuccess] = useState(false);
   
@@ -16,7 +15,7 @@ export function AuthGate({ children }: AuthGateProps) {
   const isDevelopment = import.meta.env.DEV;
   
   const {
-    session,
+    isAuthenticated,
     isLoading,
     error,
     verifyToken,
@@ -43,7 +42,6 @@ export function AuthGate({ children }: AuthGateProps) {
       verifyToken(token)
         .then(() => {
           setShowTokenSuccess(true);
-          setIsAuthenticated(true);
           setTimeout(() => setShowTokenSuccess(false), 3000);
         })
         .catch((err: Error) => {
@@ -66,22 +64,16 @@ export function AuthGate({ children }: AuthGateProps) {
     // }
     
     checkSession()
-      .then((hasSession: boolean) => {
-        setIsAuthenticated(hasSession);
+      .then(() => {
+        // Session state is managed by the SessionProvider
         setIsChecking(false);
       })
       .catch(() => {
-        setIsAuthenticated(false);
         setIsChecking(false);
       });
   }, [checkSession, isDevelopment]);
 
-  // Update auth state when session changes
-  useEffect(() => {
-    if (session) {
-      setIsAuthenticated(true);
-    }
-  }, [session]);
+  // Auth state is now managed by the useAuth hook
 
   // Show loading state while checking auth
   if (isChecking || isLoading) {
