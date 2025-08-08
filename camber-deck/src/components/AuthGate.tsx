@@ -11,7 +11,7 @@ export function AuthGate({ children }: AuthGateProps) {
   const [showTokenSuccess, setShowTokenSuccess] = useState(false);
   
   // For local development, bypass auth
-  const isDevelopment = import.meta.env.DEV;
+  // const isDevelopment = import.meta.env.DEV;
   
   const {
     isAuthenticated,
