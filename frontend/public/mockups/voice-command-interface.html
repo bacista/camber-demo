@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Command Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #111827;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: #10b981;
+            color: white;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .voice-status.inactive {
+            background: #6b7280;
+        }
+
+        .voice-status.listening {
+            background: #3b82f6;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .voice-status.processing {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        /* Voice Control Center */
+        .voice-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Voice Button */
+        .voice-button-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .voice-button {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .voice-button:hover {
+            transform: scale(1.05);
+        }
+
+        .voice-button:active {
+            transform: scale(0.95);
+        }
+
+        .voice-button.active {
+            animation: voicePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes voicePulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 30px rgba(102, 126, 234, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
+
+        .voice-rings {
+            position: absolute;
+            inset: -40px;
+            pointer-events: none;
+            display: none;
+        }
+
+        .voice-rings.active {
+            display: block;
+        }
+
+        .voice-ring {
+            position: absolute;
+            inset: 0;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            animation: expandRing 2s ease-out infinite;
+        }
+
+        .voice-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .voice-ring:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes expandRing {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Transcript Display */
+        .transcript-display {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .transcript-text {
+            font-size: 1.5rem;
+            color: #111827;
+            min-height: 2em;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .transcript-text.processing {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .confidence-indicator {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .confidence-bar {
+            display: inline-block;
+            width: 100px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            margin-left: 0.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s ease;
+        }
+
+        /* Command Suggestions */
+        .command-suggestions {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .suggestions-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+            text-align: center;
+        }
+
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .suggestion-chip {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Right Panel - Activity & Orders */
+        .right-panel {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Activity Feed */
+        .activity-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-height: 50%;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .icon-voice {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .icon-success {
+            background: #dcfce7;
+            color: #10b981;
+        }
+
+        .icon-error {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-command {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-result {
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+
+        .activity-time {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+
+        /* Quick Stats */
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        /* Voice Feedback Modal */
+        .voice-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            min-width: 400px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .voice-feedback.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .feedback-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feedback-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-message {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        /* Command Help */
+        .help-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .help-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .help-panel {
+            position: fixed;
+            bottom: 6rem;
+            right: 2rem;
+            width: 350px;
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 99;
+        }
+
+        .help-panel.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        .help-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .command-list {
+            space-y: 0.5rem;
+        }
+
+        .command-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.875rem;
+        }
+
+        .command-item:last-child {
+            border-bottom: none;
+        }
+
+        .command-phrase {
+            font-weight: 500;
+            color: #667eea;
+            margin-bottom: 0.25rem;
+        }
+
+        .command-description {
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+
+        /* Visualizer */
+        .audio-visualizer {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            height: 40px;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .audio-visualizer.active {
+            opacity: 1;
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .visualizer-bar:nth-child(1) { animation-delay: 0s; height: 10px; }
+        .visualizer-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+        .visualizer-bar:nth-child(3) { animation-delay: 0.2s; height: 15px; }
+        .visualizer-bar:nth-child(4) { animation-delay: 0.3s; height: 25px; }
+        .visualizer-bar:nth-child(5) { animation-delay: 0.4s; height: 18px; }
+        .visualizer-bar:nth-child(6) { animation-delay: 0.5s; height: 22px; }
+        .visualizer-bar:nth-child(7) { animation-delay: 0.6s; height: 12px; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.5); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .right-panel {
+                width: 100%;
+                flex-direction: row;
+            }
+
+            .activity-panel, .stats-panel {
+                flex: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .voice-button {
+                width: 140px;
+                height: 140px;
+                font-size: 2.5rem;
+            }
+
+            .transcript-text {
+                font-size: 1.25rem;
+            }
+
+            .right-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="header-title">Voice Command Center</h1>
+            <div class="voice-status inactive" id="voiceStatus">
+                <span>🎤</span>
+                <span id="statusText">Voice Inactive</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Voice Control Center -->
+            <div class="voice-center">
+                <!-- Voice Button -->
+                <div class="voice-button-container">
+                    <button class="voice-button" id="voiceButton" onclick="toggleVoice()">
+                        🎤
+                    </button>
+                    <div class="voice-rings" id="voiceRings">
+                        <div class="voice-ring"></div>
+                        <div class="voice-ring"></div>
+                        <div class="voice-ring"></div>
+                    </div>
+                    <div class="audio-visualizer" id="audioVisualizer">
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Transcript Display -->
+                <div class="transcript-display">
+                    <div class="transcript-text" id="transcriptText">
+                        Click the microphone or press Space to start
+                    </div>
+                    <div class="confidence-indicator">
+                        <span>Confidence:</span>
+                        <span class="confidence-bar">
+                            <span class="confidence-fill" id="confidenceFill" style="width: 0%"></span>
+                        </span>
+                        <span id="confidenceValue">0%</span>
+                    </div>
+                </div>
+
+                <!-- Command Suggestions -->
+                <div class="command-suggestions">
+                    <div class="suggestions-title">Try saying:</div>
+                    <div class="suggestion-chips">
+                        <button class="suggestion-chip" onclick="simulateCommand('Show pending orders')">
+                            "Show pending orders"
+                        </button>
+                        <button class="suggestion-chip" onclick="simulateCommand('Approve all high confidence')">
+                            "Approve all high confidence"
+                        </button>
+                        <button class="suggestion-chip" onclick="simulateCommand('What needs my attention')">
+                            "What needs my attention?"
+                        </button>
+                        <button class="suggestion-chip" onclick="simulateCommand('Process order 8904')">
+                            "Process order 8904"
+                        </button>
+                        <button class="suggestion-chip" onclick="simulateCommand('Check inventory for rebar')">
+                            "Check inventory for rebar"
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <!-- Activity Feed -->
+                <div class="activity-panel">
+                    <h3 class="panel-title">Recent Voice Commands</h3>
+                    <div id="activityFeed">
+                        <div class="activity-item">
+                            <div class="activity-icon icon-success">✓</div>
+                            <div class="activity-content">
+                                <div class="activity-command">"Approve order 8901"</div>
+                                <div class="activity-result">Order approved and sent to ERP</div>
+                            </div>
+                            <div class="activity-time">2m ago</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon icon-voice">🎤</div>
+                            <div class="activity-content">
+                                <div class="activity-command">"Show today's metrics"</div>
+                                <div class="activity-result">Dashboard updated</div>
+                            </div>
+                            <div class="activity-time">5m ago</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon icon-success">✓</div>
+                            <div class="activity-content">
+                                <div class="activity-command">"Send quote to ACME"</div>
+                                <div class="activity-result">Quote #Q-2024-445 sent</div>
+                            </div>
+                            <div class="activity-time">12m ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-panel">
+                    <h3 class="panel-title">Voice Metrics Today</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="commandCount">24</div>
+                            <div class="stat-label">Commands</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">96%</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">1.2s</div>
+                            <div class="stat-label">Avg Response</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">18m</div>
+                            <div class="stat-label">Time Saved</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Feedback Modal -->
+    <div class="voice-feedback" id="voiceFeedback">
+        <div class="feedback-icon" id="feedbackIcon">✓</div>
+        <div class="feedback-title" id="feedbackTitle">Command Executed</div>
+        <div class="feedback-message" id="feedbackMessage">Order has been approved</div>
+    </div>
+
+    <!-- Help Button -->
+    <button class="help-toggle" onclick="toggleHelp()">?</button>
+
+    <!-- Help Panel -->
+    <div class="help-panel" id="helpPanel">
+        <h3 class="help-title">Voice Commands</h3>
+        <div class="command-list">
+            <div class="command-item">
+                <div class="command-phrase">"Show [pending/all/today's] orders"</div>
+                <div class="command-description">Display filtered order list</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"Approve order [number]"</div>
+                <div class="command-description">Approve specific order</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"Check inventory for [product]"</div>
+                <div class="command-description">Check stock levels</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"What needs my attention?"</div>
+                <div class="command-description">Show items requiring review</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"Process all high confidence"</div>
+                <div class="command-description">Bulk approve orders >90%</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"Call [customer name]"</div>
+                <div class="command-description">Initiate customer call</div>
+            </div>
+            <div class="command-item">
+                <div class="command-phrase">"Create quote for [customer]"</div>
+                <div class="command-description">Start new quote</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isListening = false;
+        let recognition = null;
+        let commandCount = 24;
+
+        // Initialize speech recognition (simulated for demo)
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    updateStatus('listening', 'Listening...');
+                    document.getElementById('transcriptText').textContent = 'Listening...';
+                    document.getElementById('transcriptText').classList.add('processing');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    const confidence = Math.round(event.results[0][0].confidence * 100) || 95;
+                    
+                    document.getElementById('transcriptText').textContent = `"${transcript}"`;
+                    document.getElementById('transcriptText').classList.remove('processing');
+                    updateConfidence(confidence);
+                    
+                    if (event.results[0].isFinal) {
+                        processCommand(transcript);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    updateStatus('inactive', 'Voice Inactive');
+                    document.getElementById('transcriptText').textContent = 'Error: ' + event.error;
+                    stopListening();
+                };
+
+                recognition.onend = function() {
+                    stopListening();
+                };
+            }
+        }
+
+        function toggleVoice() {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            isListening = true;
+            const button = document.getElementById('voiceButton');
+            const rings = document.getElementById('voiceRings');
+            const visualizer = document.getElementById('audioVisualizer');
+            
+            button.classList.add('active');
+            rings.classList.add('active');
+            visualizer.classList.add('active');
+            
+            updateStatus('listening', 'Listening...');
+            
+            // Try to use real speech recognition
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    // If already started, stop and restart
+                    recognition.stop();
+                    setTimeout(() => recognition.start(), 100);
+                }
+            } else {
+                // Fallback to simulation
+                simulateListening();
+            }
+        }
+
+        function stopListening() {
+            isListening = false;
+            const button = document.getElementById('voiceButton');
+            const rings = document.getElementById('voiceRings');
+            const visualizer = document.getElementById('audioVisualizer');
+            
+            button.classList.remove('active');
+            rings.classList.remove('active');
+            visualizer.classList.remove('active');
+            
+            updateStatus('inactive', 'Voice Inactive');
+            
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        function simulateListening() {
+            document.getElementById('transcriptText').textContent = 'Listening...';
+            document.getElementById('transcriptText').classList.add('processing');
+            
+            // Simulate speech detection after 2 seconds
+            setTimeout(() => {
+                if (isListening) {
+                    const commands = [
+                        'Show pending orders',
+                        'Approve order 8904',
+                        'What needs my attention?',
+                        'Check inventory for steel beams'
+                    ];
+                    const command = commands[Math.floor(Math.random() * commands.length)];
+                    simulateCommand(command);
+                }
+            }, 2000);
+        }
+
+        function simulateCommand(command) {
+            if (!isListening) {
+                startListening();
+                setTimeout(() => {
+                    simulateCommand(command);
+                }, 500);
+                return;
+            }
+            
+            document.getElementById('transcriptText').textContent = `"${command}"`;
+            document.getElementById('transcriptText').classList.remove('processing');
+            updateConfidence(92 + Math.floor(Math.random() * 8));
+            
+            setTimeout(() => {
+                processCommand(command);
+            }, 500);
+        }
+
+        function processCommand(command) {
+            updateStatus('processing', 'Processing...');
+            
+            // Add to activity feed
+            addActivity(command);
+            
+            // Update command count
+            commandCount++;
+            document.getElementById('commandCount').textContent = commandCount;
+            
+            // Show feedback
+            setTimeout(() => {
+                showFeedback(command);
+                stopListening();
+            }, 1000);
+        }
+
+        function updateStatus(status, text) {
+            const statusEl = document.getElementById('voiceStatus');
+            const statusText = document.getElementById('statusText');
+            
+            statusEl.className = 'voice-status ' + status;
+            statusText.textContent = text;
+        }
+
+        function updateConfidence(value) {
+            document.getElementById('confidenceFill').style.width = value + '%';
+            document.getElementById('confidenceValue').textContent = value + '%';
+        }
+
+        function addActivity(command) {
+            const feed = document.getElementById('activityFeed');
+            const newItem = document.createElement('div');
+            newItem.className = 'activity-item';
+            newItem.style.animation = 'slideUp 0.3s ease';
+            
+            const result = getCommandResult(command);
+            
+            newItem.innerHTML = `
+                <div class="activity-icon ${result.success ? 'icon-success' : 'icon-error'}">
+                    ${result.success ? '✓' : '✗'}
+                </div>
+                <div class="activity-content">
+                    <div class="activity-command">"${command}"</div>
+                    <div class="activity-result">${result.message}</div>
+                </div>
+                <div class="activity-time">Just now</div>
+            `;
+            
+            feed.insertBefore(newItem, feed.firstChild);
+            
+            // Keep only last 5 items
+            while (feed.children.length > 5) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function getCommandResult(command) {
+            const cmd = command.toLowerCase();
+            
+            if (cmd.includes('approve')) {
+                return { success: true, message: 'Order approved and sent to ERP' };
+            } else if (cmd.includes('show') || cmd.includes('display')) {
+                return { success: true, message: 'Display updated' };
+            } else if (cmd.includes('check inventory')) {
+                return { success: true, message: 'Inventory levels retrieved' };
+            } else if (cmd.includes('attention')) {
+                return { success: true, message: '2 orders need attention' };
+            } else if (cmd.includes('call')) {
+                return { success: true, message: 'Initiating call...' };
+            } else if (cmd.includes('process')) {
+                return { success: true, message: '5 orders processed' };
+            } else {
+                return { success: false, message: 'Command not recognized' };
+            }
+        }
+
+        function showFeedback(command) {
+            const feedback = document.getElementById('voiceFeedback');
+            const result = getCommandResult(command);
+            
+            document.getElementById('feedbackIcon').textContent = result.success ? '✓' : '✗';
+            document.getElementById('feedbackIcon').style.color = result.success ? '#10b981' : '#ef4444';
+            document.getElementById('feedbackTitle').textContent = result.success ? 'Command Executed' : 'Command Failed';
+            document.getElementById('feedbackMessage').textContent = result.message;
+            
+            feedback.classList.add('show');
+            
+            setTimeout(() => {
+                feedback.classList.remove('show');
+            }, 2000);
+        }
+
+        function toggleHelp() {
+            const panel = document.getElementById('helpPanel');
+            panel.classList.toggle('show');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                toggleVoice();
+            } else if (e.key === 'Escape') {
+                stopListening();
+                document.getElementById('helpPanel').classList.remove('show');
+            }
+        });
+
+        // Initialize
+        initSpeechRecognition();
+
+        // Update activity times
+        setInterval(() => {
+            const times = document.querySelectorAll('.activity-time');
+            times.forEach((time, index) => {
+                if (index === 0 && time.textContent === 'Just now') {
+                    setTimeout(() => {
+                        time.textContent = '1m ago';
+                    }, 60000);
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html>

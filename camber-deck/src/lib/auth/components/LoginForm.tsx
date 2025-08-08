@@ -6,7 +6,6 @@ export interface LoginFormProps {
   description?: string;
   logo?: string | ReactNode;
   primaryColor?: string;
-  requestEndpoint?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -18,7 +17,6 @@ export function LoginForm({
   description = 'Enter your email to continue',
   logo,
   primaryColor = '#1CA6A3',
-  requestEndpoint = '/api/auth/request',
   onSuccess,
   onError
 }: LoginFormProps) {

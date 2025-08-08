@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Sidebar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            color: #111827;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .content-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .ai-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ai-toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .ai-toggle-btn.active {
+            background: #6b7280;
+        }
+
+        /* Order Details */
+        .order-details {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .order-summary {
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        /* AI Assistant Sidebar */
+        .ai-sidebar {
+            width: 400px;
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .ai-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .ai-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* AI Content Tabs */
+        .ai-tabs {
+            display: flex;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .ai-tab {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .ai-tab:hover {
+            background: white;
+        }
+
+        .ai-tab.active {
+            color: #7c3aed;
+            border-bottom-color: #7c3aed;
+            background: white;
+        }
+
+        /* AI Analysis */
+        .ai-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .analysis-card {
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .analysis-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+        }
+
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .risk-level {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .risk-low {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .risk-medium {
+            background: #fed7aa;
+            color: #92400e;
+        }
+
+        .risk-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .insight-item {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .insight-item:last-child {
+            border-bottom: none;
+        }
+
+        .insight-icon {
+            color: #7c3aed;
+            flex-shrink: 0;
+        }
+
+        /* Recommendations */
+        .recommendation-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            color: #4c1d95;
+        }
+
+        .confidence-score {
+            padding: 0.25rem 0.5rem;
+            background: white;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #7c3aed;
+        }
+
+        .recommendation-text {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-bottom: 0.75rem;
+        }
+
+        .recommendation-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .rec-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .rec-btn-primary {
+            background: #7c3aed;
+            color: white;
+        }
+
+        .rec-btn-primary:hover {
+            background: #6d28d9;
+        }
+
+        .rec-btn-secondary {
+            background: white;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .rec-btn-secondary:hover {
+            background: #f9fafb;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .avatar-ai {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .avatar-user {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message-sender {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .message-text {
+            background: #f3f4f6;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+
+        .message-ai .message-text {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+        }
+
+        .suggested-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .suggested-btn {
+            padding: 0.375rem 0.75rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggested-btn:hover {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            resize: none;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .send-btn {
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #6b7280;
+            border-radius: 50%;
+            animation: typing 1.4s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* History Tab */
+        .history-container {
+            display: none;
+        }
+
+        .history-container.active {
+            display: block;
+        }
+
+        .history-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f9fafb;
+        }
+
+        .history-date {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .history-summary {
+            font-size: 0.875rem;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .history-outcome {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.125rem 0.375rem;
+            background: #dcfce7;
+            color: #15803d;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .ai-sidebar {
+                width: 350px;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ai-sidebar {
+                position: fixed;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+                z-index: 100;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <div class="content-header">
+                <h1 class="header-title">Order PO-2024-8904 - Steel Supply Co</h1>
+                <button class="ai-toggle-btn" onclick="toggleAI()">
+                    <span>🤖</span>
+                    <span>AI Assistant</span>
+                </button>
+            </div>
+            
+            <div class="order-details">
+                <div class="order-summary">
+                    <h2 class="summary-title">Order Summary</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Amount</span>
+                            <span class="summary-value">$18,500</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Items</span>
+                            <span class="summary-value">5 items</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Delivery</span>
+                            <span class="summary-value">Tomorrow</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Payment Terms</span>
+                            <span class="summary-value">NET-30</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Credit Available</span>
+                            <span class="summary-value">$42,500</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Confidence</span>
+                            <span class="summary-value">87%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional order details would go here -->
+                <div style="padding: 2rem; text-align: center; color: #6b7280;">
+                    <p>Full order details, line items, and history would appear here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Sidebar -->
+        <div class="ai-sidebar" id="aiSidebar">
+            <div class="ai-header">
+                <div class="ai-title">
+                    <span>🤖</span>
+                    <span>AI Assistant</span>
+                </div>
+                <div class="ai-status">
+                    <div class="status-dot"></div>
+                    <span>Analyzing</span>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="ai-tabs">
+                <button class="ai-tab active" onclick="switchTab('analysis')">Analysis</button>
+                <button class="ai-tab" onclick="switchTab('chat')">Chat</button>
+                <button class="ai-tab" onclick="switchTab('history')">History</button>
+            </div>
+
+            <!-- Analysis Tab -->
+            <div class="ai-content" id="analysisTab">
+                <!-- Risk Assessment -->
+                <div class="analysis-card">
+                    <h3 class="analysis-title">
+                        <span>⚠️</span>
+                        Risk Assessment
+                    </h3>
+                    <div class="risk-indicator">
+                        <span>Overall Risk:</span>
+                        <span class="risk-level risk-medium">Medium</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">📦</span>
+                        <span>Partial inventory for Rebar 1/2" - 150 of 200 units available</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">✓</span>
+                        <span>Customer has excellent payment history (100% on-time)</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">💰</span>
+                        <span>Sufficient credit available ($42,500 remaining)</span>
+                    </div>
+                </div>
+
+                <!-- AI Recommendations -->
+                <div class="recommendation-card">
+                    <div class="recommendation-header">
+                        <h3 class="recommendation-title">💡 Recommended Action</h3>
+                        <span class="confidence-score">92% confidence</span>
+                    </div>
+                    <p class="recommendation-text">
+                        Approve with split shipment: Ship 150 units today from main warehouse, 
+                        50 units tomorrow from North Branch. Customer typically accepts split shipments.
+                    </p>
+                    <div class="recommendation-actions">
+                        <button class="rec-btn rec-btn-primary">Apply Recommendation</button>
+                        <button class="rec-btn rec-btn-secondary">Modify</button>
+                    </div>
+                </div>
+
+                <!-- Pattern Recognition -->
+                <div class="analysis-card">
+                    <h3 class="analysis-title">
+                        <span>📊</span>
+                        Pattern Recognition
+                    </h3>
+                    <div class="insight-item">
+                        <span class="insight-icon">📈</span>
+                        <span>This customer orders similar items every 2-3 weeks</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">🔄</span>
+                        <span>75% of their orders are for job sites (rush delivery)</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">💡</span>
+                        <span>Consider setting up recurring order automation</span>
+                    </div>
+                </div>
+
+                <!-- Alternative Solutions -->
+                <div class="analysis-card">
+                    <h3 class="analysis-title">
+                        <span>🔄</span>
+                        Alternative Solutions
+                    </h3>
+                    <div class="insight-item">
+                        <span class="insight-icon">1️⃣</span>
+                        <span>Transfer 50 units from North Branch (3-hour delay)</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">2️⃣</span>
+                        <span>Substitute with RBR-1/2-20FT-G40 (higher grade, same price)</span>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-icon">3️⃣</span>
+                        <span>Expedite incoming shipment (arrives 4PM today)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div class="chat-container" id="chatTab">
+                <div class="chat-messages">
+                    <div class="chat-message">
+                        <div class="message-avatar avatar-ai">AI</div>
+                        <div class="message-content">
+                            <div class="message-sender">AI Assistant</div>
+                            <div class="message-text">
+                                I've analyzed order PO-2024-8904. There's a stock shortage for one item, 
+                                but I have a solution that won't delay delivery. Would you like me to explain?
+                            </div>
+                            <div class="suggested-actions">
+                                <button class="suggested-btn">Explain solution</button>
+                                <button class="suggested-btn">Check alternatives</button>
+                                <button class="suggested-btn">Contact customer</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-message">
+                        <div class="message-avatar avatar-user">You</div>
+                        <div class="message-content">
+                            <div class="message-sender">You</div>
+                            <div class="message-text">
+                                What's the best way to handle the stock shortage?
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-message">
+                        <div class="message-avatar avatar-ai">AI</div>
+                        <div class="message-content">
+                            <div class="message-sender">AI Assistant</div>
+                            <div class="message-text">
+                                Based on this customer's history, I recommend a split shipment:
+                                <br><br>
+                                1. Ship 150 units today from main warehouse<br>
+                                2. Ship 50 units tomorrow from North Branch<br>
+                                <br>
+                                This customer has accepted 8 split shipments in the past year with no complaints. 
+                                The North Branch delivery will arrive by 10 AM tomorrow, meeting their deadline.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="typing-indicator">
+                        <span>AI is typing</span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <textarea class="chat-input" placeholder="Ask me anything about this order..." rows="1"></textarea>
+                        <button class="send-btn">→</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="history-container" id="historyTab">
+                <div class="ai-content">
+                    <div class="history-item">
+                        <div class="history-date">Mar 1, 2024 - 2:30 PM</div>
+                        <div class="history-summary">Analyzed similar stock shortage for PO-2024-8234</div>
+                        <span class="history-outcome">✓ Split shipment approved</span>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-date">Feb 28, 2024 - 9:15 AM</div>
+                        <div class="history-summary">Credit check for new customer Metro Contractors</div>
+                        <span class="history-outcome">✓ NET-30 recommended</span>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-date">Feb 27, 2024 - 4:45 PM</div>
+                        <div class="history-summary">Inventory optimization for high-demand items</div>
+                        <span class="history-outcome">✓ Reorder points adjusted</span>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-date">Feb 26, 2024 - 11:20 AM</div>
+                        <div class="history-summary">Price matching analysis for ACME Construction</div>
+                        <span class="history-outcome">✓ 5% discount approved</span>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-date">Feb 25, 2024 - 3:00 PM</div>
+                        <div class="history-summary">Fraud detection on suspicious order pattern</div>
+                        <span class="history-outcome">⚠ Manual review required</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let aiSidebarOpen = false;
+
+        function toggleAI() {
+            const sidebar = document.getElementById('aiSidebar');
+            const toggleBtn = document.querySelector('.ai-toggle-btn');
+            
+            aiSidebarOpen = !aiSidebarOpen;
+            
+            if (aiSidebarOpen) {
+                sidebar.classList.add('active');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '<span>✕</span><span>Close AI</span>';
+                
+                // Simulate AI analysis
+                simulateAnalysis();
+            } else {
+                sidebar.classList.remove('active');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '<span>🤖</span><span>AI Assistant</span>';
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.ai-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Hide all tabs
+            document.getElementById('analysisTab').style.display = 'none';
+            document.getElementById('chatTab').classList.remove('active');
+            document.getElementById('historyTab').classList.remove('active');
+            
+            // Show selected tab
+            if (tabName === 'analysis') {
+                document.getElementById('analysisTab').style.display = 'block';
+            } else if (tabName === 'chat') {
+                document.getElementById('chatTab').classList.add('active');
+            } else if (tabName === 'history') {
+                document.getElementById('historyTab').classList.add('active');
+            }
+        }
+
+        function simulateAnalysis() {
+            const statusElement = document.querySelector('.ai-status span:last-child');
+            
+            setTimeout(() => {
+                statusElement.textContent = 'Processing...';
+            }, 500);
+            
+            setTimeout(() => {
+                statusElement.textContent = 'Complete';
+                
+                // Animate cards appearing
+                const cards = document.querySelectorAll('.analysis-card, .recommendation-card');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.animation = 'fadeIn 0.3s ease';
+                    }, index * 100);
+                });
+            }, 1500);
+        }
+
+        // Chat functionality
+        const chatInput = document.querySelector('.chat-input');
+        const sendBtn = document.querySelector('.send-btn');
+        const chatMessages = document.querySelector('.chat-messages');
+        const typingIndicator = document.querySelector('.typing-indicator');
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message';
+            userMessage.innerHTML = `
+                <div class="message-avatar avatar-user">You</div>
+                <div class="message-content">
+                    <div class="message-sender">You</div>
+                    <div class="message-text">${message}</div>
+                </div>
+            `;
+            
+            typingIndicator.parentNode.insertBefore(userMessage, typingIndicator);
+            
+            // Clear input
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            
+            // Show typing indicator
+            typingIndicator.classList.add('active');
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Simulate AI response
+            setTimeout(() => {
+                typingIndicator.classList.remove('active');
+                
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'chat-message';
+                aiMessage.innerHTML = `
+                    <div class="message-avatar avatar-ai">AI</div>
+                    <div class="message-content">
+                        <div class="message-sender">AI Assistant</div>
+                        <div class="message-text">
+                            I understand your question about "${message}". 
+                            Based on the order analysis, here's what I recommend...
+                        </div>
+                    </div>
+                `;
+                
+                typingIndicator.parentNode.insertBefore(aiMessage, typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 1500);
+        }
+
+        // Suggested action buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('suggested-btn')) {
+                chatInput.value = e.target.textContent;
+                sendMessage();
+            }
+        });
+
+        // Apply recommendation
+        document.addEventListener('click', function(e) {
+            if (e.target.textContent === 'Apply Recommendation') {
+                e.target.textContent = 'Applied ✓';
+                e.target.style.background = '#10b981';
+                
+                // Show feedback
+                const feedback = document.createElement('div');
+                feedback.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #10b981;
+                    color: white;
+                    padding: 1rem 2rem;
+                    border-radius: 0.5rem;
+                    font-weight: 600;
+                    z-index: 1000;
+                    animation: fadeInOut 2s ease;
+                `;
+                feedback.textContent = 'Split shipment approved!';
+                document.body.appendChild(feedback);
+                
+                setTimeout(() => {
+                    document.body.removeChild(feedback);
+                }, 2000);
+            }
+        });
+
+        // Add fade in animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

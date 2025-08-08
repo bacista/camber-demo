@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Morning Overview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            color: #111827;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .user-info::before {
+            content: '👤';
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Auto-Processing Pipeline */
+        .pipeline-section {
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: linear-gradient(to right, #f0fdf4, #dcfce7);
+            border-bottom: 1px solid #bbf7d0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #15803d;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        .minimize-btn {
+            background: none;
+            border: 1px solid #86efac;
+            color: #15803d;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .minimize-btn:hover {
+            background: #f0fdf4;
+        }
+
+        .pipeline-stats {
+            padding: 0.75rem 1.5rem;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .pipeline-progress {
+            height: 4px;
+            background: #e5e7eb;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+            width: 75%;
+            animation: progress 2s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(133%); }
+        }
+
+        .processed-orders {
+            padding: 0.75rem 1.5rem;
+        }
+
+        .order-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            color: #22c55e;
+            font-size: 1rem;
+        }
+
+        .order-customer {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .order-amount {
+            margin-left: auto;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .order-terms {
+            padding: 0.125rem 0.375rem;
+            background: #f3f4f6;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .order-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .show-more {
+            padding: 0.5rem 1.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .show-more:hover {
+            background: #f9fafb;
+        }
+
+        /* Attention Required Section */
+        .attention-section {
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .attention-header {
+            padding: 1rem 1.5rem;
+            background: linear-gradient(to right, #fef3c7, #fde68a);
+            border-bottom: 1px solid #fcd34d;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .attention-title {
+            font-weight: 600;
+            color: #92400e;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .attention-count {
+            background: #f59e0b;
+            color: white;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .keyboard-hint {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #92400e;
+            opacity: 0.7;
+        }
+
+        /* Quick Decision Cards */
+        .decision-cards {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .decision-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .decision-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-customer {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-po {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .confidence-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .confidence-high {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .confidence-medium {
+            background: #fed7aa;
+            color: #92400e;
+        }
+
+        .card-financials {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 0.25rem;
+        }
+
+        .financial-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .amount-large {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .status-badge {
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-warning {
+            background: #fed7aa;
+            color: #92400e;
+        }
+
+        .issue-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 0.25rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            color: #92400e;
+        }
+
+        .issue-warning::before {
+            content: '⚠';
+            font-size: 1rem;
+        }
+
+        .suggestion {
+            font-weight: 500;
+            color: #7c2d12;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+
+        /* Live Metrics Bar */
+        .metrics-bar {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .metric-label {
+            color: #6b7280;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .metric-trend {
+            font-size: 0.75rem;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+        }
+
+        .trend-up {
+            color: #059669;
+            background: #f0fdf4;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+
+            .card-financials {
+                flex-direction: column;
+            }
+
+            .metrics-bar {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1 class="header-title">Orders</h1>
+            </div>
+            <div class="user-info">
+                Sarah Chen • Tuesday 9:15 AM
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Auto-Processing Pipeline -->
+            <div class="pipeline-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="status-indicator"></div>
+                        <span>🟢 Auto-Processing Pipeline</span>
+                    </div>
+                    <button class="minimize-btn">Minimize ▼</button>
+                </div>
+                <div class="pipeline-stats">
+                    45 orders • $124,500 • 0 errors • Avg confidence: 94%
+                </div>
+                <div class="pipeline-progress">
+                    <div class="progress-bar"></div>
+                </div>
+                <div class="processed-orders">
+                    <div class="order-item">
+                        <span class="check-icon">✓</span>
+                        <span>PO-2024-8901</span>
+                        <span class="order-customer">ACME Construction</span>
+                        <span class="order-amount">$12,500</span>
+                        <span class="order-terms">NET-60</span>
+                        <span class="order-time">2s ago</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="check-icon">✓</span>
+                        <span>PO-2024-8902</span>
+                        <span class="order-customer">BuildCo Inc</span>
+                        <span class="order-amount">$8,750</span>
+                        <span class="order-terms">NET-30</span>
+                        <span class="order-time">5s ago</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="check-icon">✓</span>
+                        <span>PO-2024-8903</span>
+                        <span class="order-customer">Regional Builders</span>
+                        <span class="order-amount">$5,200</span>
+                        <span class="order-terms">NET-45</span>
+                        <span class="order-time">8s ago</span>
+                    </div>
+                </div>
+                <div class="show-more">...39 more processing in background</div>
+            </div>
+
+            <!-- Attention Required Section -->
+            <div class="attention-section">
+                <div class="attention-header">
+                    <div class="attention-title">
+                        ⚡ Attention Required
+                        <span class="attention-count">2</span>
+                    </div>
+                    <span class="keyboard-hint">[Keyboard: A]</span>
+                </div>
+                <div class="decision-cards">
+                    <!-- Card 1: Partial Stock -->
+                    <div class="decision-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-customer">Steel Supply Co</div>
+                                <div class="card-po">PO-2024-8904</div>
+                            </div>
+                            <div class="confidence-badge confidence-high">87% confidence</div>
+                        </div>
+                        <div class="card-financials">
+                            <div class="financial-item">
+                                <span class="amount-large">$18,500</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-success">NET-30</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-success">Credit: OK ✓</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-warning">Stock: Partial ⚠</span>
+                            </div>
+                        </div>
+                        <div class="issue-warning">
+                            Line 3: Rebar 1/2" - Need 200, Have 150
+                            <span class="suggestion">Suggested: Ship 150 now, 50 tomorrow from North Branch</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary">APPROVE SPLIT SHIPMENT</button>
+                            <button class="btn btn-secondary">View Details</button>
+                            <button class="btn btn-secondary">Find Alt</button>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: New Customer -->
+                    <div class="decision-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-customer">New Customer - Metro Contractors</div>
+                                <div class="card-po">PO-2024-8905</div>
+                            </div>
+                            <div class="confidence-badge confidence-medium">72% confidence</div>
+                        </div>
+                        <div class="card-financials">
+                            <div class="financial-item">
+                                <span class="amount-large">$32,000</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-warning">TERMS: TBD</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-warning">Credit: Check Required</span>
+                            </div>
+                            <div class="financial-item">
+                                <span class="status-badge badge-success">Stock: ✓</span>
+                            </div>
+                        </div>
+                        <div class="issue-warning">
+                            First order from customer - Needs payment terms
+                            <span class="suggestion">Suggested: NET-30 (standard for new customers)</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary">APPROVE NET-30</button>
+                            <button class="btn btn-secondary">APPROVE COD</button>
+                            <button class="btn btn-secondary">Request Prepay</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Metrics Bar -->
+            <div class="metrics-bar">
+                <div class="metric-item">
+                    <span class="metric-label">📊 Live Metrics</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Automation Rate:</span>
+                    <span class="metric-value">95.6%</span>
+                    <span class="metric-trend trend-up">↑</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Avg Process Time:</span>
+                    <span class="metric-value">2.1s</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Queue:</span>
+                    <span class="metric-value">Empty</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate live updates
+        let processedCount = 3;
+        const customers = ['ACME Construction', 'BuildCo Inc', 'Regional Builders', 'Steel Supply Co'];
+        
+        function addProcessedOrder() {
+            processedCount++;
+            const orderNum = `PO-2024-${8900 + processedCount}`;
+            const customer = customers[Math.floor(Math.random() * customers.length)];
+            const amount = Math.floor(Math.random() * 10000) + 2000;
+            const terms = ['NET-30', 'NET-45', 'NET-60'][Math.floor(Math.random() * 3)];
+            
+            const ordersContainer = document.querySelector('.processed-orders');
+            const newOrder = document.createElement('div');
+            newOrder.className = 'order-item';
+            newOrder.style.animation = 'slideIn 0.3s ease';
+            newOrder.innerHTML = `
+                <span class="check-icon">✓</span>
+                <span>${orderNum}</span>
+                <span class="order-customer">${customer}</span>
+                <span class="order-amount">$${amount.toLocaleString()}</span>
+                <span class="order-terms">${terms}</span>
+                <span class="order-time">just now</span>
+            `;
+            
+            ordersContainer.insertBefore(newOrder, ordersContainer.firstChild);
+            
+            // Keep only 3 visible
+            while (ordersContainer.children.length > 3) {
+                ordersContainer.removeChild(ordersContainer.lastChild);
+            }
+            
+            // Update stats
+            const statsText = document.querySelector('.pipeline-stats');
+            const newCount = 45 + processedCount - 3;
+            statsText.textContent = `${newCount} orders • $${((124500 + (processedCount * 5000)) / 1000).toFixed(0)}K • 0 errors • Avg confidence: 94%`;
+        }
+
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Simulate processing
+        setInterval(addProcessedOrder, 4000);
+
+        // Make cards clickable
+        document.querySelectorAll('.decision-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('btn')) {
+                    window.location.href = 'quick-decision-expanded.html';
+                }
+            });
+        });
+
+        // Button interactions
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const card = this.closest('.decision-card');
+                card.style.opacity = '0.5';
+                card.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    card.style.display = 'none';
+                    // Update attention count
+                    const countBadge = document.querySelector('.attention-count');
+                    const currentCount = parseInt(countBadge.textContent);
+                    if (currentCount > 1) {
+                        countBadge.textContent = currentCount - 1;
+                    } else {
+                        // Hide attention section when empty
+                        document.querySelector('.attention-section').style.display = 'none';
+                    }
+                }, 300);
+            });
+        });
+    </script>
+</body>
+</html>

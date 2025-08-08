@@ -105,7 +105,6 @@ export function AuthGate({ children }: AuthGateProps) {
             title="Investor Access"
             description="Enter your email to access the Camber pitch deck"
             primaryColor="#1CA6A3"
-            requestEndpoint="/api/auth/request"
           />
 
           {/* Footer */}

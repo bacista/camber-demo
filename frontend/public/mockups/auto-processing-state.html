@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Processing State - Order Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f9fafb;
+            color: #1f2937;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .auto-mode-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: #10b981;
+            color: white;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .auto-mode-indicator::before {
+            content: '⚡';
+            font-size: 1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .zero-queue-container {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .zero-queue-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-radius: 50%;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+        }
+
+        .zero-queue-badge::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            border: 3px solid #10b981;
+            opacity: 0.3;
+            animation: ripple 2s ease-out infinite;
+        }
+
+        @keyframes ripple {
+            from {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+            to {
+                transform: scale(1.1);
+                opacity: 0;
+            }
+        }
+
+        .status-message {
+            font-size: 1.5rem;
+            color: #6b7280;
+            font-weight: 300;
+            margin-top: 1rem;
+        }
+
+        .sub-message {
+            font-size: 1rem;
+            color: #9ca3af;
+            margin-top: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .performance-section, .live-feed-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+            transition: all 0.3s ease;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric.highlight .metric-value {
+            color: #10b981;
+        }
+
+        /* Live Feed */
+        .live-feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .feed-toggle {
+            background: none;
+            border: 1px solid #e5e7eb;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .feed-toggle:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .feed-items {
+            max-height: 200px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .feed-items.minimized {
+            max-height: 100px;
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            border-bottom: 1px solid #f3f4f6;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .feed-item:last-child {
+            border-bottom: none;
+        }
+
+        .feed-arrow {
+            color: #10b981;
+            font-size: 1rem;
+        }
+
+        .feed-time {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            min-width: 50px;
+        }
+
+        .feed-order {
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        .feed-amount {
+            margin-left: auto;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        /* Processing Animation */
+        .processing-wave {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                #10b981 20%, 
+                #10b981 80%, 
+                transparent 100%);
+            animation: wave 3s linear infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes wave {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(100%); }
+        }
+
+        /* Floating notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            z-index: 1000;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .toast-message {
+            font-size: 0.875rem;
+            color: #374151;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .zero-queue-badge {
+                width: 100px;
+                height: 100px;
+                font-size: 1.5rem;
+            }
+
+            .status-message {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="header-title">Orders</h1>
+            <div class="auto-mode-indicator">
+                Auto Mode: ON
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Zero Queue Display -->
+            <div class="zero-queue-container">
+                <div class="zero-queue-badge">
+                    <span>✓ 0</span>
+                </div>
+                <div class="status-message">All orders processing automatically</div>
+                <div class="sub-message">Nothing requires your attention</div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <!-- Performance Section -->
+                <div class="performance-section">
+                    <h3 class="section-title">Today's Performance</h3>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value" id="orderCount">127</div>
+                            <div class="metric-label">Orders</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="totalValue">$385K</div>
+                            <div class="metric-label">Value</div>
+                        </div>
+                        <div class="metric highlight">
+                            <div class="metric-value" id="autoRate">98.4%</div>
+                            <div class="metric-label">Auto Rate</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="avgTime">1.8s</div>
+                            <div class="metric-label">Avg Time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Feed Section -->
+                <div class="live-feed-section">
+                    <div class="live-feed-header">
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>Live Feed</span>
+                        </div>
+                        <button class="feed-toggle" onclick="toggleFeed()">Expand</button>
+                    </div>
+                    <div class="feed-items minimized" id="feedItems">
+                        <!-- Feed items will be inserted here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Wave Animation -->
+        <div class="processing-wave"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script>
+        // Simulated data
+        let orderCount = 127;
+        let totalValue = 385000;
+        let processedToday = [];
+        
+        const customers = [
+            'ACME Construction', 'BuildCo Inc', 'Steel Supply Co', 
+            'Regional Builders', 'Metro Contractors', 'Urban Development',
+            'Concrete Solutions', 'Framework Ltd', 'Materials Plus'
+        ];
+
+        // Update metrics periodically
+        function updateMetrics() {
+            orderCount += Math.floor(Math.random() * 3);
+            const newOrderValue = Math.floor(Math.random() * 15000) + 2000;
+            totalValue += newOrderValue;
+            
+            document.getElementById('orderCount').textContent = orderCount;
+            document.getElementById('totalValue').textContent = `$${(totalValue / 1000).toFixed(0)}K`;
+            
+            // Slightly vary the auto rate
+            const autoRate = (98 + Math.random() * 1.5).toFixed(1);
+            document.getElementById('autoRate').textContent = `${autoRate}%`;
+            
+            // Vary processing time
+            const avgTime = (1.5 + Math.random() * 0.8).toFixed(1);
+            document.getElementById('avgTime').textContent = `${avgTime}s`;
+            
+            // Add to feed
+            addFeedItem(newOrderValue);
+            
+            // Show toast occasionally
+            if (Math.random() > 0.7) {
+                showToast(`Order processed: $${newOrderValue.toLocaleString()}`);
+            }
+        }
+
+        // Add item to live feed
+        function addFeedItem(amount) {
+            const feed = document.getElementById('feedItems');
+            const time = new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+            
+            const customer = customers[Math.floor(Math.random() * customers.length)];
+            const orderNum = `PO-${8900 + orderCount}`;
+            
+            const item = document.createElement('div');
+            item.className = 'feed-item';
+            item.innerHTML = `
+                <span class="feed-arrow">↓</span>
+                <span class="feed-time">${time}</span>
+                <span class="feed-order">${orderNum}</span>
+                <span>${customer}</span>
+                <span class="feed-amount">$${amount.toLocaleString()}</span>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+            
+            // Keep only last 10 items
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Toggle feed expansion
+        function toggleFeed() {
+            const feed = document.getElementById('feedItems');
+            const button = document.querySelector('.feed-toggle');
+            
+            if (feed.classList.contains('minimized')) {
+                feed.classList.remove('minimized');
+                button.textContent = 'Minimize';
+            } else {
+                feed.classList.add('minimized');
+                button.textContent = 'Expand';
+            }
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-icon">✓</div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Remove after animation
+            setTimeout(() => {
+                container.removeChild(toast);
+            }, 3000);
+        }
+
+        // Initialize feed with some items
+        function initializeFeed() {
+            for (let i = 0; i < 5; i++) {
+                const amount = Math.floor(Math.random() * 10000) + 2000;
+                addFeedItem(amount);
+            }
+        }
+
+        // Start simulation
+        initializeFeed();
+        setInterval(updateMetrics, 3000 + Math.random() * 2000);
+
+        // Animate the zero badge occasionally
+        setInterval(() => {
+            const badge = document.querySelector('.zero-queue-badge');
+            badge.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                badge.style.transform = 'scale(1)';
+            }, 200);
+        }, 10000);
+    </script>
+</body>
+</html>
