@@ -46,7 +46,7 @@ export function AuthGate({ children }: AuthGateProps) {
           setIsAuthenticated(true);
           setTimeout(() => setShowTokenSuccess(false), 3000);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           console.error('Token verification failed:', err);
           setShowTokenExpired(true);
           setTimeout(() => setShowTokenExpired(false), 5000);
@@ -66,7 +66,7 @@ export function AuthGate({ children }: AuthGateProps) {
     // }
     
     checkSession()
-      .then((hasSession) => {
+      .then((hasSession: boolean) => {
         setIsAuthenticated(hasSession);
         setIsChecking(false);
       })
@@ -133,7 +133,6 @@ export function AuthGate({ children }: AuthGateProps) {
             description="Enter your email to access the Camber pitch deck"
             primaryColor="#1CA6A3"
             requestEndpoint="/api/auth/request"
-            className="shadow-2xl"
           />
 
           {/* Footer */}

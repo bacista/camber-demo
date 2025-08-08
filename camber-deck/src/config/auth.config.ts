@@ -75,7 +75,7 @@ export const authConfig: AuthConfig = {
             </body>
           </html>
         `,
-        text: ({ link, email, expiryHours }) => `
+        text: ({ link, expiryHours }) => `
 Camber - Exclusive Investor Access
 
 Thank you for your interest in Camber.
