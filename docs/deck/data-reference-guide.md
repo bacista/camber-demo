@@ -4,18 +4,33 @@
 
 ### Metrics & Sources
 
-1. **75% Manual Order Error Rate**
-   - Source/Justification: Industry average for manual order entry in distribution
-   - Context: Human error rates in data entry typically range from 1-5% per field; with complex orders having 15-20 fields, compound error rates reach 75%
+1. **Up to 75% of complex B2B orders contain errors**
+   - Source: Conexiom 2024, DocuClipper Data Entry Statistics
+   - Individual field error rate: 1-5% per field
+   - Complex order math: 1 - (0.97^20 fields) = 45% minimum error probability
+   - With 3% error rate: 1 - (0.97^20) = 45%; with 5% rate: 1 - (0.95^20) = 64%
+   - Real-world observed: Up to 75% of orders contain at least one error
+   - Clarification: This represents likelihood of at least one error per order, not individual field accuracy
 
 2. **20+ hours/week on manual entry**
    - Math: Average sales rep processes 40-50 quotes/week × 30 minutes per quote = 20-25 hours
    - Source: Time-motion studies in B2B distribution
 
-3. **$15 manual vs $2.36 automated (cost per order)**
-   - Manual: Labor cost ($30/hr) × 0.5 hours = $15
-   - Automated: Infrastructure + processing costs amortized = $2.36
-   - ROI: 84% cost reduction
+3. **$15-50 manual vs $2-3 automated (cost per order)**
+   
+   Manual Cost Breakdown:
+   - Simple orders: $30/hr × 0.5 hrs = $15
+   - Complex orders: $30-35/hr × 1.5 hrs = $45-52 (rounded to $50)
+   - Industry range: $50-$1,000 for highly complex orders (Conexiom 2024)
+   
+   Automated Cost:
+   - $2-3 per order including infrastructure, API calls, and processing
+   - Based on typical SaaS infrastructure costs amortized per transaction
+   
+   ROI Calculation:
+   - Simple orders: ($15 - $2.50) / $15 = 83% cost reduction
+   - Complex orders: ($50 - $3) / $50 = 94% cost reduction
+   - Overall range: 84-94% cost reduction depending on complexity
 
 4. **70% of B2B buyers abandon without payment terms**
    - Source: B2B eCommerce market research
@@ -26,7 +41,7 @@
 ### Efficiency Gains
 
 - **20+ hours saved per week**: Direct time savings from automation
-- **75% error reduction**: From 75% error rate to <20% with AI validation
+- **75% error reduction**: From up to 75% of orders containing errors to <20% with AI validation
 
 ## Slide 4: Product Overview
 
