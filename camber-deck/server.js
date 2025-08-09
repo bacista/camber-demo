@@ -296,7 +296,7 @@ app.post('/api/auth/request', async (req, res) => {
           </head>
           <body>
             <div class="container">
-              <h2>Access Your Camber Investor Deck</h2>
+              <h2>Access The Camber Investor Deck</h2>
               <p>Click the button below to securely access the Camber pitch deck:</p>
               <p style="margin: 30px 0;">
                 <a href="${magicLink}" class="button">Access Pitch Deck</a>
@@ -314,7 +314,7 @@ app.post('/api/auth/request', async (req, res) => {
       `;
 
       const emailText = `
-Access Your Camber Investor Deck
+Access The Camber Investor Deck
 
 Click the link below to securely access the Camber pitch deck:
 ${magicLink}
@@ -327,7 +327,7 @@ If you didn't request this link, please ignore this email.
 
       const emailSent = await sendEmailViaResend(
         email,
-        'Access Your Camber Investor Deck',
+        'Access The Camber Investor Deck',
         emailHtml,
         emailText
       );
