@@ -29,6 +29,12 @@ export const onePagerContent = {
   market: {
     opportunity: "$20bn of quick wins in workflow efficiency",
     vision: "$500bn incremental value over 10 years",
+    fragmentation: "52,000+",
+    fragmentationLabel: "distributors",
+    fragmentationDetail: "Across our target channels",
+    digitalAdoption: "Only 18-25%",
+    digitalAdoptionLabel: "digitally enabled",
+    digitalDetail: "Most still rely on phone, fax, and spreadsheets",
     channels: [
       "Construction", "Electrical", "HVACR/Plumbing", 
       "Industrial MRO", "Metals", "Safety"

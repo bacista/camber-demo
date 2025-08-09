@@ -16,16 +16,18 @@ export const MarketSlide: React.FC = () => {
             <div className="mb-8">
               <TrendingUp className="w-12 h-12 text-camber mb-4" />
               <h3 className="text-5xl font-bold text-camber mb-2">
-                {onePagerContent.market.opportunity}
+                {onePagerContent.market.fragmentation}
               </h3>
-              <p className="text-gray-600">Immediate efficiency gains</p>
+              <p className="text-gray-600 text-lg font-medium">{onePagerContent.market.fragmentationLabel}</p>
+              <p className="text-gray-500 text-sm mt-1">{onePagerContent.market.fragmentationDetail}</p>
             </div>
             
             <div>
               <h3 className="text-5xl font-bold text-gray-900 mb-2">
-                {onePagerContent.market.vision}
+                {onePagerContent.market.digitalAdoption}
               </h3>
-              <p className="text-gray-600">10-year value creation potential</p>
+              <p className="text-gray-600 text-lg font-medium">{onePagerContent.market.digitalAdoptionLabel}</p>
+              <p className="text-gray-500 text-sm mt-1">{onePagerContent.market.digitalDetail}</p>
             </div>
           </div>
           
@@ -49,7 +51,7 @@ export const MarketSlide: React.FC = () => {
         
         <div className="mt-12 text-center">
           <p className="text-xl text-gray-700">
-            Serving the <span className="font-bold">$2 trillion</span> materials market that powers North America
+            Serving the <span className="font-bold">$2 trillion</span> materials distribution market
           </p>
         </div>
       </div>
