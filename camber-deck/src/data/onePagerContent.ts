@@ -12,7 +12,7 @@ export const onePagerContent = {
       manualError: "Up to 75%",
       costPerOrder: "$15-50 manual vs $2-3 automated",
       timeWasted: "20+ hours/week on manual entry",
-      abandonment: "70% of B2B buyers abandon without payment terms"
+      abandonment: "70% abandon without payment terms"
     }
   },
 
