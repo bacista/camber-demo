@@ -38,7 +38,11 @@ export function AuthGate({ children }: AuthGateProps) {
       
       // Verify the token
       verifyToken(token)
-        .then(() => {
+        .then((data) => {
+          // Store session token in localStorage for mobile support
+          if (data?.session?.token) {
+            localStorage.setItem('sessionToken', data.session.token);
+          }
           setShowTokenSuccess(true);
           setTimeout(() => setShowTokenSuccess(false), 3000);
         })

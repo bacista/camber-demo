@@ -35,8 +35,17 @@ export function SessionProvider({
       
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const endpoint = `${apiUrl}${checkEndpoint}`;
+      
+      // Include Authorization header if sessionToken exists (for mobile)
+      const headers: HeadersInit = {};
+      const sessionToken = localStorage.getItem('sessionToken');
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      
       const response = await fetch(endpoint, {
         credentials: 'include',
+        headers,
         signal: controller.signal
       });
       
@@ -70,6 +79,8 @@ export function SessionProvider({
         credentials: 'include'
       });
       setSession(null);
+      // Clear localStorage token for mobile
+      localStorage.removeItem('sessionToken');
       // Redirect to login or home
       window.location.href = '/';
     } catch (error) {

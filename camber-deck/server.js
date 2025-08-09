@@ -49,8 +49,141 @@ async function loadAuthModules() {
 }
 
 // Simplified auth implementation for local development
-const sessions = new Map(); // In-memory session storage
-const tokens = new Map(); // In-memory token storage
+const tokens = new Map(); // In-memory token storage (short-lived, okay to lose on restart)
+
+// Upstash Redis client for session storage
+class RedisClient {
+  constructor(url, token) {
+    this.url = url;
+    this.token = token;
+  }
+
+  async request(command) {
+    try {
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(command),
+      });
+
+      if (!response.ok) {
+        console.error('Redis request failed:', response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Redis error:', error);
+      return null;
+    }
+  }
+
+  async get(key) {
+    const result = await this.request(['GET', key]);
+    if (result === null) return null;
+    
+    try {
+      return JSON.parse(result);
+    } catch {
+      return result;
+    }
+  }
+
+  async set(key, value, expiryMs) {
+    const serialized = JSON.stringify(value);
+    const command = ['SET', key, serialized];
+    
+    if (expiryMs) {
+      // Convert milliseconds to seconds for Redis EX command
+      const seconds = Math.floor(expiryMs / 1000);
+      command.push('EX', String(seconds));
+    }
+    
+    return await this.request(command);
+  }
+
+  async delete(key) {
+    return await this.request(['DEL', key]);
+  }
+}
+
+// Initialize Redis client for production, use Map for development
+let sessionStore;
+
+if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.log('Using Upstash Redis for session storage');
+  sessionStore = new RedisClient(
+    process.env.UPSTASH_REDIS_REST_URL,
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  );
+} else {
+  console.log('Using in-memory session storage (development mode)');
+  // Fallback to in-memory storage for development
+  const sessions = new Map();
+  sessionStore = {
+    async get(key) {
+      return sessions.get(key);
+    },
+    async set(key, value, expiryMs) {
+      sessions.set(key, value);
+      // Optional: implement expiry for in-memory storage
+      if (expiryMs) {
+        setTimeout(() => sessions.delete(key), expiryMs);
+      }
+      return 'OK';
+    },
+    async delete(key) {
+      return sessions.delete(key);
+    }
+  };
+}
+
+// Helper function to send email via Resend
+async function sendEmailViaResend(to, subject, html, text) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM || 'noreply@example.com';
+  const replyTo = process.env.RESEND_REPLY_TO;
+
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY not configured, cannot send email');
+    return false;
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        html,
+        text,
+        reply_to: replyTo,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Resend API error:', error);
+      return false;
+    }
+
+    const data = await response.json();
+    console.log('Email sent successfully via Resend:', data.id);
+    return true;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    return false;
+  }
+}
 
 // Request endpoint - sends magic link
 app.post('/api/auth/request', async (req, res) => {
@@ -85,17 +218,83 @@ app.post('/api/auth/request', async (req, res) => {
     console.log(`[DEBUG] Token generated: ${token}`);
     console.log(`[DEBUG] Total tokens stored: ${tokens.size}`);
 
-    // In development, log the magic link instead of sending email
-    const magicLink = `http://localhost:5173/?token=${token}`;
-    console.log('\n=================================');
-    console.log('🔗 Magic Link for', email);
-    console.log(magicLink);
-    console.log('=================================\n');
+    // Generate magic link
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const magicLink = `${frontendUrl}/?token=${token}`;
+
+    // Send email in production, log to console in development
+    if (process.env.NODE_ENV === 'production' && process.env.RESEND_API_KEY) {
+      // Create email HTML
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .button { display: inline-block; padding: 12px 24px; background-color: #1CA6A3; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; }
+              .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h2>Access Your Camber Investor Deck</h2>
+              <p>Click the button below to securely access the Camber pitch deck:</p>
+              <p style="margin: 30px 0;">
+                <a href="${magicLink}" class="button">Access Pitch Deck</a>
+              </p>
+              <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+              <p style="color: #666; font-size: 14px; word-break: break-all;">${magicLink}</p>
+              <div class="footer">
+                <p>This link will expire in 4 hours for security reasons.</p>
+                <p>If you didn't request this link, please ignore this email.</p>
+                <p>© ${new Date().getFullYear()} Camber, Inc. | Confidential and Proprietary</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const emailText = `
+Access Your Camber Investor Deck
+
+Click the link below to securely access the Camber pitch deck:
+${magicLink}
+
+This link will expire in 4 hours for security reasons.
+If you didn't request this link, please ignore this email.
+
+© ${new Date().getFullYear()} Camber, Inc. | Confidential and Proprietary
+      `.trim();
+
+      const emailSent = await sendEmailViaResend(
+        email,
+        'Access Your Camber Investor Deck',
+        emailHtml,
+        emailText
+      );
+
+      if (!emailSent) {
+        // Fall back to console logging if email fails
+        console.log('\n=================================');
+        console.log('🔗 Magic Link for', email);
+        console.log(magicLink);
+        console.log('=================================\n');
+      }
+    } else {
+      // Development mode or no Resend configured - log to console
+      console.log('\n=================================');
+      console.log('🔗 Magic Link for', email);
+      console.log(magicLink);
+      console.log('=================================\n');
+    }
 
     // Return success response
     res.json({
       success: true,
-      message: 'Magic link sent! Check your console for the link in development mode.'
+      message: process.env.NODE_ENV === 'production' 
+        ? 'Magic link sent! Check your email for the access link.' 
+        : 'Magic link sent! Check your console for the link in development mode.'
     });
   } catch (error) {
     console.error('Request error:', error);
@@ -151,18 +350,19 @@ app.post('/api/auth/verify', async (req, res) => {
       expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000) // 14 days
     };
 
-    // Store session
-    sessions.set(sessionId, session);
+    // Store session in Redis/memory with 14-day expiry
+    await sessionStore.set(sessionId, session, 14 * 24 * 60 * 60 * 1000);
 
     // Delete used token
     tokens.delete(token);
 
-    // Set session cookie
+    // Set session cookie with environment-aware settings
     res.cookie('session', sessionId, {
       httpOnly: true,
-      secure: false, // false for local development
-      sameSite: 'lax',
-      maxAge: 14 * 24 * 60 * 60 * 1000 // 14 days
+      secure: process.env.NODE_ENV === 'production', // true in production for HTTPS
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-domain in production
+      maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+      ...(process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }) // optional domain setting
     });
 
     console.log(`[DEBUG] Token verified successfully! Session created: ${sessionId}`);
@@ -171,7 +371,8 @@ app.post('/api/auth/verify', async (req, res) => {
     res.json({
       success: true,
       session: {
-        email: session.email
+        email: session.email,
+        token: sessionId  // Include session token for mobile clients
       }
     });
   } catch (error) {
@@ -186,7 +387,9 @@ app.post('/api/auth/verify', async (req, res) => {
 // Session endpoint - checks current session
 app.get('/api/auth/session', async (req, res) => {
   try {
-    const sessionId = req.cookies.session;
+    // Check cookie first, then Authorization header (for mobile)
+    const sessionId = req.cookies.session || 
+                     req.headers.authorization?.replace('Bearer ', '');
     
     if (!sessionId) {
       return res.status(401).json({
@@ -195,7 +398,7 @@ app.get('/api/auth/session', async (req, res) => {
       });
     }
 
-    const session = sessions.get(sessionId);
+    const session = await sessionStore.get(sessionId);
     
     if (!session) {
       return res.status(401).json({
@@ -206,7 +409,7 @@ app.get('/api/auth/session', async (req, res) => {
 
     // Check if session has expired
     if (Date.now() > session.expiresAt) {
-      sessions.delete(sessionId);
+      await sessionStore.delete(sessionId);
       return res.status(401).json({
         success: false,
         message: 'Session expired'
@@ -234,7 +437,7 @@ app.post('/api/auth/logout', async (req, res) => {
     const sessionId = req.cookies.session;
     
     if (sessionId) {
-      sessions.delete(sessionId);
+      await sessionStore.delete(sessionId);
     }
 
     res.clearCookie('session');
