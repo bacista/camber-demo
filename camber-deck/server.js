@@ -13,13 +13,26 @@ const app = express();
 const PORT = process.env.API_PORT || process.env.PORT || 3030;
 
 // CORS configuration
-const corsOrigin = process.env.NODE_ENV === 'production' 
-  ? process.env.FRONTEND_URL 
-  : 'http://localhost:5173';
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? process.env.FRONTEND_URL?.split(',').map(url => url.trim()).filter(Boolean)
+  : ['http://localhost:5173'];
+
+// Ensure allowedOrigins is always an array
+const corsOrigins = Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins];
 
 // Middleware
 app.use(cors({
-  origin: corsOrigin,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    if (corsOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked request from: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(bodyParser.json());
@@ -111,6 +124,33 @@ class RedisClient {
   }
 }
 
+// Structured logging helper
+function log(level, event, data = {}) {
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    event,
+    env: process.env.NODE_ENV || 'development',
+    ...data
+  };
+  
+  if (process.env.NODE_ENV === 'production') {
+    // In production, output as JSON for better parsing
+    console.log(JSON.stringify(logEntry));
+  } else {
+    // In development, use readable format
+    console.log(`[${level.toUpperCase()}] ${event}:`, data);
+  }
+}
+
+// Metrics tracking
+const metrics = {
+  authRequests: new Map(), // Track by email
+  emailsSent: [],
+  tokensVerified: [],
+  errors: []
+};
+
 // Initialize Redis client for production, use Map for development
 let sessionStore;
 
@@ -125,6 +165,7 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_REDIS_REST_URL 
   // Fallback to in-memory storage for development
   const sessions = new Map();
   sessionStore = {
+    sessions, // Expose for stats
     async get(key) {
       return sessions.get(key);
     },
@@ -145,7 +186,8 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_REDIS_REST_URL 
 // Helper function to send email via Resend
 async function sendEmailViaResend(to, subject, html, text) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || 'noreply@example.com';
+  const fromEmail = process.env.RESEND_FROM || 'noreply@example.com';
+  const from = `Camber <${fromEmail}>`;
   const replyTo = process.env.RESEND_REPLY_TO;
 
   if (!apiKey) {
@@ -189,6 +231,10 @@ async function sendEmailViaResend(to, subject, html, text) {
 app.post('/api/auth/request', async (req, res) => {
   try {
     const { email } = req.body;
+    const clientIp = req.headers['x-forwarded-for'] || req.ip;
+    const userAgent = req.headers['user-agent'];
+    
+    log('info', 'auth_request_received', { email, clientIp, userAgent });
     
     if (!email) {
       return res.status(400).json({
@@ -206,8 +252,11 @@ app.post('/api/auth/request', async (req, res) => {
       });
     }
 
-    // Generate a mock token for development
+    // Generate a secure token
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    // Track metrics
+    metrics.authRequests.set(email, { timestamp: Date.now(), ip: clientIp });
     
     // Store token with expiry (4 hours)
     tokens.set(token, {
@@ -215,11 +264,20 @@ app.post('/api/auth/request', async (req, res) => {
       expiresAt: Date.now() + (4 * 60 * 60 * 1000)
     });
     
-    console.log(`[DEBUG] Token generated: ${token}`);
-    console.log(`[DEBUG] Total tokens stored: ${tokens.size}`);
+    log('debug', 'token_generated', { email, tokenCount: tokens.size });
 
-    // Generate magic link
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Get the origin from the request header
+    const requestOrigin = req.get('origin');
+    
+    // Get allowed origins
+    const allowedUrls = process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL?.split(',').map(url => url.trim()).filter(Boolean)
+      : ['http://localhost:5173'];
+    
+    // Use the request origin if it's allowed, otherwise use the first allowed URL
+    const frontendUrl = (allowedUrls.includes(requestOrigin) ? requestOrigin : allowedUrls[0]) || 'http://localhost:5173';
+    
+    // Generate magic link with the correct origin
     const magicLink = `${frontendUrl}/?token=${token}`;
 
     // Send email in production, log to console in development
@@ -273,6 +331,13 @@ If you didn't request this link, please ignore this email.
         emailHtml,
         emailText
       );
+      
+      if (emailSent) {
+        log('info', 'magic_link_sent', { email, method: 'resend' });
+        metrics.emailsSent.push({ email, timestamp: Date.now() });
+      } else {
+        log('error', 'email_send_failed', { email });
+      }
 
       if (!emailSent) {
         // Fall back to console logging if email fails
@@ -309,10 +374,13 @@ If you didn't request this link, please ignore this email.
 app.post('/api/auth/verify', async (req, res) => {
   try {
     const { token } = req.body;
+    const clientIp = req.headers['x-forwarded-for'] || req.ip;
     
-    console.log(`[DEBUG] Verify attempt with token: ${token}`);
-    console.log(`[DEBUG] Current tokens in memory: ${tokens.size}`);
-    console.log(`[DEBUG] Available tokens:`, Array.from(tokens.keys()));
+    log('debug', 'verify_attempt', { 
+      tokenProvided: !!token, 
+      tokensInMemory: tokens.size,
+      clientIp 
+    });
     
     if (!token) {
       return res.status(400).json({
@@ -325,7 +393,8 @@ app.post('/api/auth/verify', async (req, res) => {
     const tokenData = tokens.get(token);
     
     if (!tokenData) {
-      console.log(`[DEBUG] Token not found in memory!`);
+      log('warn', 'verify_failed_invalid_token', { clientIp });
+      metrics.errors.push({ type: 'invalid_token', timestamp: Date.now(), ip: clientIp });
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired token'
@@ -365,8 +434,12 @@ app.post('/api/auth/verify', async (req, res) => {
       ...(process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }) // optional domain setting
     });
 
-    console.log(`[DEBUG] Token verified successfully! Session created: ${sessionId}`);
-    console.log(`[DEBUG] Setting cookie for email: ${session.email}`);
+    log('info', 'token_verified_success', { 
+      email: session.email, 
+      sessionId,
+      clientIp 
+    });
+    metrics.tokensVerified.push({ email: session.email, timestamp: Date.now() });
 
     res.json({
       success: true,
@@ -376,7 +449,8 @@ app.post('/api/auth/verify', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Verify error:', error);
+    log('error', 'verify_error', { error: error.message });
+    metrics.errors.push({ type: 'verify_exception', timestamp: Date.now(), error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to verify token'
@@ -462,6 +536,70 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Stats endpoint for monitoring
+app.get('/api/health/stats', async (req, res) => {
+  try {
+    // Simple auth - check for secret header or specific IP
+    const authHeader = req.headers['x-stats-key'];
+    if (process.env.NODE_ENV === 'production' && authHeader !== process.env.STATS_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Calculate stats
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000);
+    const oneDayAgo = now - (24 * 60 * 60 * 1000);
+
+    // Get active session count from Redis
+    let activeSessions = 0;
+    if (sessionStore instanceof RedisClient) {
+      try {
+        const keys = await sessionStore.request(['KEYS', 'session:*']);
+        activeSessions = keys ? keys.length : 0;
+      } catch (e) {
+        log('error', 'stats_redis_error', { error: e.message });
+      }
+    } else {
+      // For in-memory storage
+      activeSessions = sessionStore.sessions?.size || 0;
+    }
+
+    const stats = {
+      timestamp: new Date().toISOString(),
+      activeSessions,
+      recentActivity: {
+        authRequestsLastHour: Array.from(metrics.authRequests.values())
+          .filter(r => r.timestamp > oneHourAgo).length,
+        emailsSentLastHour: metrics.emailsSent
+          .filter(e => e.timestamp > oneHourAgo).length,
+        tokensVerifiedLastHour: metrics.tokensVerified
+          .filter(t => t.timestamp > oneHourAgo).length,
+        authRequestsLastDay: Array.from(metrics.authRequests.values())
+          .filter(r => r.timestamp > oneDayAgo).length,
+        emailsSentLastDay: metrics.emailsSent
+          .filter(e => e.timestamp > oneDayAgo).length,
+        tokensVerifiedLastDay: metrics.tokensVerified
+          .filter(t => t.timestamp > oneDayAgo).length
+      },
+      errors: {
+        recent: metrics.errors.slice(-10), // Last 10 errors
+        countLastHour: metrics.errors
+          .filter(e => e.timestamp > oneHourAgo).length,
+        countLastDay: metrics.errors
+          .filter(e => e.timestamp > oneDayAgo).length
+      },
+      uniqueUsersToday: new Set(
+        metrics.authRequests.keys()
+      ).size
+    };
+
+    res.json(stats);
+  } catch (error) {
+    log('error', 'stats_endpoint_error', { error: error.message });
+    res.status(500).json({ error: 'Failed to generate stats' });
+  }
 });
 
 // Start server
