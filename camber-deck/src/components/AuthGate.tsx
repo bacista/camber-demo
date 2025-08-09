@@ -7,8 +7,8 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
-  const [showTokenExpired, setShowTokenExpired] = useState(false);
   const [showTokenSuccess, setShowTokenSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   
   // For local development, bypass auth
   // const isDevelopment = import.meta.env.DEV;
@@ -48,11 +48,21 @@ export function AuthGate({ children }: AuthGateProps) {
         })
         .catch((err: Error) => {
           console.error('Token verification failed:', err);
-          setShowTokenExpired(true);
-          setTimeout(() => setShowTokenExpired(false), 5000);
+          setLocalError('Your magic link has expired. Please request a new one.');
+          setTimeout(() => setLocalError(null), 5000);
         });
     }
   }, [verifyToken]);
+
+  // Auto-dismiss error from useAuth hook after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearError();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
 
   // In development mode, bypass authentication completely
   // Temporarily commented out for testing the auth UI
@@ -84,23 +94,9 @@ export function AuthGate({ children }: AuthGateProps) {
           </div>
 
           {/* Alerts */}
-          {showTokenExpired && (
+          {(localError || error) && (
             <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-lg">
-              <p className="text-red-400 text-sm">
-                Your magic link has expired. Please request a new one.
-              </p>
-            </div>
-          )}
-          
-          {error && (
-            <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
-              <button
-                onClick={clearError}
-                className="mt-2 text-xs text-red-300 hover:text-red-200"
-              >
-                Dismiss
-              </button>
+              <p className="text-red-400 text-sm">{localError || error}</p>
             </div>
           )}
 
