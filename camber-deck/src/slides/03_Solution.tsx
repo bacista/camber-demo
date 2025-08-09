@@ -26,7 +26,7 @@ export const SolutionSlide: React.FC = () => {
         
         <div className="mt-12 p-6 bg-camber/10 rounded-lg">
           <p className="text-lg font-semibold text-gray-900">
-            Result: Sales reps save 20+ hours per week, errors drop by 75%, and customers get instant responses
+            Result: Sales reps save 20+ hours per week, order errors drop by 75%, and customers get instant responses
           </p>
         </div>
       </div>

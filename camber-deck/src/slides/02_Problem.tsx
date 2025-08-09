@@ -23,7 +23,7 @@ export const ProblemSlide: React.FC = () => {
         <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="text-center">
             <p className="text-3xl font-bold text-red-600">{onePagerContent.problem.stats.manualError}</p>
-            <p className="text-sm text-gray-600 mt-2">Manual Order Error Rate</p>
+            <p className="text-sm text-gray-600 mt-2">Orders with Errors</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold text-red-600">{onePagerContent.problem.stats.timeWasted}</p>

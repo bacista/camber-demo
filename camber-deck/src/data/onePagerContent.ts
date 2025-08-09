@@ -9,8 +9,8 @@ export const onePagerContent = {
       "Ad-hoc follow-ups → lost deals and inconsistent customer experience"
     ],
     stats: {
-      manualError: "75%",
-      costPerOrder: "$15 manual vs $2.36 automated",
+      manualError: "Up to 75%",
+      costPerOrder: "$15-50 manual vs $2-3 automated",
       timeWasted: "20+ hours/week on manual entry",
       abandonment: "70% of B2B buyers abandon without payment terms"
     }
